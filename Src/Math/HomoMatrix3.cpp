@@ -1,4 +1,5 @@
 #include "HomoMatrix3.h"
+#include <math.h>
 #include "../Tool/LogSystem.h"
 
 namespace MagicMath
