@@ -92,9 +92,6 @@ namespace MagicDIP
                 pixel[0] = salientValue.at(hid).at(wid) * 255 / maxSalientValue;
                 pixel[1] = salientValue.at(hid).at(wid) * 255 / maxSalientValue;
                 pixel[2] = salientValue.at(hid).at(wid) * 255 / maxSalientValue;
-                //pixel[0] = salientValue.at(hid).at(wid);
-                //pixel[1] = salientValue.at(hid).at(wid);
-                //pixel[2] = salientValue.at(hid).at(wid);
             }
         }
         return cvtImg;

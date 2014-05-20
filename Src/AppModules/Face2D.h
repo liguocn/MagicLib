@@ -33,6 +33,8 @@ namespace MagicApp
         void GetDPs(std::vector<int>& posList); // h, w
         void GetFPs(std::vector<int>& posList);
         void GetParameter(int& browNum, int& eyeNum, int& noseNum, int& mouseNum, int& borderNum);
+        void GetEyeCenter(double& leftX, double& leftY, double& rightX, double& rightY);
+        void GetMouseCenter(double& x, double& y);
 
         ~FaceFeaturePoint();
 

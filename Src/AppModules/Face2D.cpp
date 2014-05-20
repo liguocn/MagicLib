@@ -498,6 +498,40 @@ namespace MagicApp
         borderNum = mBorderFPs.size() / 2;
     }
 
+    void FaceFeaturePoint::GetEyeCenter(double& leftX, double& leftY, double& rightX, double& rightY)
+    {
+        leftX = 0;
+        leftY = 0;
+        rightX = 0;
+        rightY = 0;
+        int eyeSize = mLeftEyeFPs.size() / 2;
+        for (int eyeId = 0; eyeId < eyeSize; eyeId++)
+        {
+            leftX += mLeftEyeFPs.at(eyeId * 2 + 1);
+            leftY += mLeftEyeFPs.at(eyeId * 2);
+            rightX += mRightEyeFPs.at(eyeId * 2 + 1);
+            rightY += mRightEyeFPs.at(eyeId * 2);
+        }
+        leftX /= eyeSize;
+        leftY /= eyeSize;
+        rightX /= eyeSize;
+        rightY /= eyeSize;
+    }
+
+    void FaceFeaturePoint::GetMouseCenter(double& x, double& y)
+    {
+        x = 0;
+        y = 0;
+        int mouseSize = mMouseFPs.size() / 2;
+        for (int fpsId = 0; fpsId < mouseSize; fpsId++)
+        {
+            x += mMouseFPs.at(fpsId * 2 + 1);
+            y += mMouseFPs.at(fpsId * 2);
+        }
+        x /= mouseSize;
+        y /= mouseSize;
+    }
+
     Face2D::Face2D() : 
         mpImage(NULL),
         mpFps(NULL),
