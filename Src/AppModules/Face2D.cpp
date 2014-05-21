@@ -3,6 +3,7 @@
 #include "../Math/HomoMatrix3.h"
 #include "../DIP/Deformation.h"
 #include "../Tool/LogSystem.h"
+#include "../DIP/FeatureDetection.h"
 
 namespace MagicApp
 {
@@ -183,6 +184,20 @@ namespace MagicApp
         baseIndex += (borderNum * 2);
 
         UpdateDPs();
+    }
+
+    void FaceFeaturePoint::Set(const std::vector<int>& posList, const FaceFeaturePoint* refFps)
+    {
+        int browNum, eyeNum, noseNum, mouseNum, borderNum;
+        if (refFps == NULL)
+        {
+            GetParameter(browNum, eyeNum, noseNum, mouseNum, borderNum);
+        }
+        else
+        {
+            refFps->GetParameter(browNum, eyeNum, noseNum, mouseNum, borderNum);
+        }
+        Load(browNum, eyeNum, noseNum, mouseNum, borderNum, posList);
     }
 
     void FaceFeaturePoint::UpdateDPs()
@@ -423,73 +438,73 @@ namespace MagicApp
         UpdateDPs();
     }
 
-    void FaceFeaturePoint::GetDPs(std::vector<int>& posList)
+    void FaceFeaturePoint::GetDPs(std::vector<int>& posList) const
     {
         posList.clear();
-        for (std::vector<int>::iterator itr = mLeftBrowDPs.begin(); itr != mLeftBrowDPs.end(); itr++)
+        for (std::vector<int>::const_iterator itr = mLeftBrowDPs.begin(); itr != mLeftBrowDPs.end(); itr++)
         {
             posList.push_back(*itr);
         }
-        for (std::vector<int>::iterator itr = mRightBrowDPs.begin(); itr != mRightBrowDPs.end(); itr++)
+        for (std::vector<int>::const_iterator itr = mRightBrowDPs.begin(); itr != mRightBrowDPs.end(); itr++)
         {
             posList.push_back(*itr);
         }
-        for (std::vector<int>::iterator itr = mLeftEyeDPs.begin(); itr != mLeftEyeDPs.end(); itr++)
+        for (std::vector<int>::const_iterator itr = mLeftEyeDPs.begin(); itr != mLeftEyeDPs.end(); itr++)
         {
             posList.push_back(*itr);
         }
-        for (std::vector<int>::iterator itr = mRightEyeDPs.begin(); itr != mRightEyeDPs.end(); itr++)
+        for (std::vector<int>::const_iterator itr = mRightEyeDPs.begin(); itr != mRightEyeDPs.end(); itr++)
         {
             posList.push_back(*itr);
         }
-        for (std::vector<int>::iterator itr = mNoseDPs.begin(); itr != mNoseDPs.end(); itr++)
+        for (std::vector<int>::const_iterator itr = mNoseDPs.begin(); itr != mNoseDPs.end(); itr++)
         {
             posList.push_back(*itr);
         }
-        for (std::vector<int>::iterator itr = mMouseDPs.begin(); itr != mMouseDPs.end(); itr++)
+        for (std::vector<int>::const_iterator itr = mMouseDPs.begin(); itr != mMouseDPs.end(); itr++)
         {
             posList.push_back(*itr);
         }
-        for (std::vector<int>::iterator itr = mBorderDPs.begin(); itr != mBorderDPs.end(); itr++)
+        for (std::vector<int>::const_iterator itr = mBorderDPs.begin(); itr != mBorderDPs.end(); itr++)
         {
             posList.push_back(*itr);
         }
     }
 
-    void FaceFeaturePoint::GetFPs(std::vector<int>& posList)
+    void FaceFeaturePoint::GetFPs(std::vector<int>& posList) const
     {
         posList.clear();
-        for (std::vector<int>::iterator itr = mLeftBrowFPs.begin(); itr != mLeftBrowFPs.end(); itr++)
+        for (std::vector<int>::const_iterator itr = mLeftBrowFPs.begin(); itr != mLeftBrowFPs.end(); itr++)
         {
             posList.push_back(*itr);
         }
-        for (std::vector<int>::iterator itr = mRightBrowFPs.begin(); itr != mRightBrowFPs.end(); itr++)
+        for (std::vector<int>::const_iterator itr = mRightBrowFPs.begin(); itr != mRightBrowFPs.end(); itr++)
         {
             posList.push_back(*itr);
         }
-        for (std::vector<int>::iterator itr = mLeftEyeFPs.begin(); itr != mLeftEyeFPs.end(); itr++)
+        for (std::vector<int>::const_iterator itr = mLeftEyeFPs.begin(); itr != mLeftEyeFPs.end(); itr++)
         {
             posList.push_back(*itr);
         }
-        for (std::vector<int>::iterator itr = mRightEyeFPs.begin(); itr != mRightEyeFPs.end(); itr++)
+        for (std::vector<int>::const_iterator itr = mRightEyeFPs.begin(); itr != mRightEyeFPs.end(); itr++)
         {
             posList.push_back(*itr);
         }
-        for (std::vector<int>::iterator itr = mNoseFPs.begin(); itr != mNoseFPs.end(); itr++)
+        for (std::vector<int>::const_iterator itr = mNoseFPs.begin(); itr != mNoseFPs.end(); itr++)
         {
             posList.push_back(*itr);
         }
-        for (std::vector<int>::iterator itr = mMouseFPs.begin(); itr != mMouseFPs.end(); itr++)
+        for (std::vector<int>::const_iterator itr = mMouseFPs.begin(); itr != mMouseFPs.end(); itr++)
         {
             posList.push_back(*itr);
         }
-        for (std::vector<int>::iterator itr = mBorderFPs.begin(); itr != mBorderFPs.end(); itr++)
+        for (std::vector<int>::const_iterator itr = mBorderFPs.begin(); itr != mBorderFPs.end(); itr++)
         {
             posList.push_back(*itr);
         }
     }
 
-    void FaceFeaturePoint::GetParameter(int& browNum, int& eyeNum, int& noseNum, int& mouseNum, int& borderNum)
+    void FaceFeaturePoint::GetParameter(int& browNum, int& eyeNum, int& noseNum, int& mouseNum, int& borderNum) const
     {
         browNum = mLeftBrowFPs.size() / 2;
         eyeNum = mLeftEyeFPs.size() / 2;
@@ -498,7 +513,7 @@ namespace MagicApp
         borderNum = mBorderFPs.size() / 2;
     }
 
-    void FaceFeaturePoint::GetEyeCenter(double& leftX, double& leftY, double& rightX, double& rightY)
+    void FaceFeaturePoint::GetEyeCenter(double& leftX, double& leftY, double& rightX, double& rightY) const
     {
         leftX = 0;
         leftY = 0;
@@ -518,7 +533,7 @@ namespace MagicApp
         rightY /= eyeSize;
     }
 
-    void FaceFeaturePoint::GetMouseCenter(double& x, double& y)
+    void FaceFeaturePoint::GetMouseCenter(double& x, double& y) const
     {
         x = 0;
         y = 0;
@@ -601,6 +616,240 @@ namespace MagicApp
             mpFps = new FaceFeaturePoint;
         }
         return mpFps->Load(fileName);
+    }
+
+    void Face2D::AutoAlignFps(const std::vector<int>& markPosList)
+    {
+        //Calculate initial fps according to markPosList
+        double eyeLeftX, eyeLeftY, eyeRightX, eyeRightY;
+        mpFps->GetEyeCenter(eyeLeftX, eyeLeftY, eyeRightX, eyeRightY);
+        double mouseX, mouseY;
+        mpFps->GetMouseCenter(mouseX, mouseY);
+        std::vector<cv::Point2f> cvTargetFps(3);
+        cvTargetFps.at(0) = cv::Point2f(eyeLeftX, eyeLeftY);
+        cvTargetFps.at(1) = cv::Point2f(eyeRightX, eyeRightY);
+        cvTargetFps.at(2) = cv::Point2f(mouseX, mouseY);
+        std::vector<cv::Point2f> cvMarkFps(3);
+        cvMarkFps.at(0) = cv::Point2f(markPosList.at(1), markPosList.at(0));
+        cvMarkFps.at(1) = cv::Point2f(markPosList.at(3), markPosList.at(2));
+        cvMarkFps.at(2) = cv::Point2f(markPosList.at(5), markPosList.at(4));
+        std::vector<int> fpsList;
+        mpFps->GetFPs(fpsList);
+        RigidFittingFps(cvTargetFps, cvMarkFps, fpsList);
+
+        //Align to feature: feature image, fps pca.
+        /*cv::Mat featureImg = MagicDIP::FeatureDetection::CannyEdgeDetection(*mpImage);
+        int imgW = mpImage->cols;
+        int imgH = mpImage->rows;
+
+        int markGrayThre = 10;
+        int neigSize = 5;
+        int fpsSize = fpsList.size() / 2;
+        std::vector<cv::Point2f> cvFaceFps;
+        std::vector<cv::Point2f> cvFaceRefFps;
+        for (int fpsId = 0; fpsId < fpsSize; fpsId++)
+        {
+            int posX = fpsList.at(fpsId * 2 + 1);
+            int posY = fpsList.at(fpsId * 2);
+            int maxGray = -1;
+            int maxX, maxY;
+            for (int neigId = 0; neigId < neigSize; neigId++)
+            {
+                int hStart = posY - neigId;
+                hStart = hStart < 0 ? 0 : hStart;
+                int hEnd = posY + neigId;
+                hEnd = hEnd >= imgH ? imgH - 1 : hEnd;
+                int wLeft = posX - neigId;
+                if (wLeft >= 0)
+                {
+                    for (int hid = hStart; hid <= hEnd; hid++)
+                    {
+                        if (featureImg.ptr(hid, wLeft)[0] > maxGray)
+                        {
+                            maxGray = featureImg.ptr(hid, wLeft)[0];
+                            maxX = wLeft;
+                            maxY = hid;
+                        }
+                    }
+                }
+                int wRight = posX + neigId;
+                if (wRight < imgW)
+                {
+                    for (int hid = hStart; hid <= hEnd; hid++)
+                    {
+                        if (featureImg.ptr(hid, wRight)[0] > maxGray)
+                        {
+                            maxGray = featureImg.ptr(hid, wRight)[0];
+                            maxX = wRight;
+                            maxY = hid;
+                        }
+                    }
+                }
+                int wStart = posX - neigId + 1;
+                wStart = wStart < 0 ? 0 : wStart;
+                int wEnd = posX + neigId - 1;
+                wEnd = wEnd >= imgW ? imgW - 1 : wEnd;
+                int hTop = posY - neigId;
+                if (hTop >= 0)
+                {
+                    for (int wid = wStart; wid <= wEnd; wid++)
+                    {
+                        if (featureImg.ptr(hTop, wid)[0] > maxGray)
+                        {
+                            maxGray = featureImg.ptr(hTop, wid)[0];
+                            maxX = wid;
+                            maxY = hTop;
+                        }
+                    }
+                }
+                int hDown = posY + neigId;
+                if (hDown < imgH)
+                {
+                    for (int wid = wStart; wid <= wEnd; wid++)
+                    {
+                        if (featureImg.ptr(hDown, wid)[0] > maxGray)
+                        {
+                            maxGray = featureImg.ptr(hDown, wid)[0];
+                            maxX = wid;
+                            maxY = hDown;
+                        }
+                    }
+                }
+            }
+            if (maxGray >= markGrayThre)
+            {
+                cvFaceFps.push_back(cv::Point2f(posX, posY));
+                cvFaceRefFps.push_back(cv::Point2f(maxX, maxY));
+            }
+        }
+        if (cvFaceFps.size() > 2)
+        {
+            RigidFittingFps(cvFaceFps, cvFaceRefFps, fpsList);
+            DebugLog << "Rigid fitting: " << cvFaceFps.size() << " " << fpsSize << std::endl;
+        }*/
+
+        //Update fps
+        mpFps->Set(fpsList, NULL);
+    }
+
+    void Face2D::AutoAlignFps()
+    {
+        //Align to feature: feature image, fps pca.
+        cv::Mat featureImg = MagicDIP::FeatureDetection::CannyEdgeDetection(*mpImage);
+        int imgW = mpImage->cols;
+        int imgH = mpImage->rows;
+
+        std::vector<int> fpsList;
+        mpFps->GetFPs(fpsList);
+        int markGrayThre = 10;
+        int neigSize = 5;
+        int fpsSize = fpsList.size() / 2;
+        std::vector<cv::Point2f> cvFaceFps;
+        std::vector<cv::Point2f> cvFaceRefFps;
+        for (int fpsId = 0; fpsId < fpsSize; fpsId++)
+        {
+            int posX = fpsList.at(fpsId * 2 + 1);
+            int posY = fpsList.at(fpsId * 2);
+            int maxGray = -1;
+            int maxX, maxY;
+            for (int neigId = 0; neigId < neigSize; neigId++)
+            {
+                int hStart = posY - neigId;
+                hStart = hStart < 0 ? 0 : hStart;
+                int hEnd = posY + neigId;
+                hEnd = hEnd >= imgH ? imgH - 1 : hEnd;
+                int wLeft = posX - neigId;
+                if (wLeft >= 0)
+                {
+                    for (int hid = hStart; hid <= hEnd; hid++)
+                    {
+                        if (featureImg.ptr(hid, wLeft)[0] > maxGray)
+                        {
+                            maxGray = featureImg.ptr(hid, wLeft)[0];
+                            maxX = wLeft;
+                            maxY = hid;
+                        }
+                    }
+                }
+                int wRight = posX + neigId;
+                if (wRight < imgW)
+                {
+                    for (int hid = hStart; hid <= hEnd; hid++)
+                    {
+                        if (featureImg.ptr(hid, wRight)[0] > maxGray)
+                        {
+                            maxGray = featureImg.ptr(hid, wRight)[0];
+                            maxX = wRight;
+                            maxY = hid;
+                        }
+                    }
+                }
+                int wStart = posX - neigId + 1;
+                wStart = wStart < 0 ? 0 : wStart;
+                int wEnd = posX + neigId - 1;
+                wEnd = wEnd >= imgW ? imgW - 1 : wEnd;
+                int hTop = posY - neigId;
+                if (hTop >= 0)
+                {
+                    for (int wid = wStart; wid <= wEnd; wid++)
+                    {
+                        if (featureImg.ptr(hTop, wid)[0] > maxGray)
+                        {
+                            maxGray = featureImg.ptr(hTop, wid)[0];
+                            maxX = wid;
+                            maxY = hTop;
+                        }
+                    }
+                }
+                int hDown = posY + neigId;
+                if (hDown < imgH)
+                {
+                    for (int wid = wStart; wid <= wEnd; wid++)
+                    {
+                        if (featureImg.ptr(hDown, wid)[0] > maxGray)
+                        {
+                            maxGray = featureImg.ptr(hDown, wid)[0];
+                            maxX = wid;
+                            maxY = hDown;
+                        }
+                    }
+                }
+            }
+            if (maxGray >= markGrayThre)
+            {
+                cvFaceFps.push_back(cv::Point2f(posX, posY));
+                cvFaceRefFps.push_back(cv::Point2f(maxX, maxY));
+            }
+        }
+        if (cvFaceFps.size() > 2)
+        {
+            RigidFittingFps(cvFaceFps, cvFaceRefFps, fpsList);
+            DebugLog << "Rigid fitting: " << cvFaceFps.size() << " " << fpsSize << std::endl;
+        }
+
+        //Update fps
+        mpFps->Set(fpsList, NULL);
+    }
+
+    void Face2D::RigidFittingFps(const std::vector<cv::Point2f>& cvSrcList, const std::vector<cv::Point2f>& cvTargetList, 
+            std::vector<int>& fps)
+    {
+        cv::Mat transMat = cv::estimateRigidTransform(cvSrcList, cvTargetList, false);
+        MagicMath::HomoMatrix3 fpsTransform;
+        fpsTransform.SetValue(0, 0, transMat.at<double>(0, 0));
+        fpsTransform.SetValue(0, 1, transMat.at<double>(0, 1));
+        fpsTransform.SetValue(0, 2, transMat.at<double>(0, 2));
+        fpsTransform.SetValue(1, 0, transMat.at<double>(1, 0));
+        fpsTransform.SetValue(1, 1, transMat.at<double>(1, 1));
+        fpsTransform.SetValue(1, 2, transMat.at<double>(1, 2));
+        int fpsSize = fps.size() / 2;
+        for (int fpsId = 0; fpsId < fpsSize; fpsId++)
+        {
+            double resX, resY;
+            fpsTransform.TransformPoint(fps.at(fpsId * 2 + 1), fps.at(fpsId * 2), resX, resY);
+            fps.at(fpsId * 2 + 1) = floor(resX + 0.5);
+            fps.at(fpsId * 2) = floor(resY + 0.5);
+        }
     }
 
     FaceFeaturePoint* Face2D::GetFps(void)

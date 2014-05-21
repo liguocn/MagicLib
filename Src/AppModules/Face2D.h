@@ -26,15 +26,16 @@ namespace MagicApp
         //void Load();
         bool Load(const std::string& fileName);
         void Load(int browNum, int eyeNum, int noseNum, int mouseNum, int borderNum, const std::vector<int>& posList);
+        void Set(const std::vector<int>& posList, const FaceFeaturePoint* refFps);
         void Save(const std::string& fileName);
         bool Select(int hid, int wid);
         void MoveTo(int hid, int wid);
         void MoveDelta(int deltaH, int deltaW);
-        void GetDPs(std::vector<int>& posList); // h, w
-        void GetFPs(std::vector<int>& posList);
-        void GetParameter(int& browNum, int& eyeNum, int& noseNum, int& mouseNum, int& borderNum);
-        void GetEyeCenter(double& leftX, double& leftY, double& rightX, double& rightY);
-        void GetMouseCenter(double& x, double& y);
+        void GetDPs(std::vector<int>& posList) const; // h, w
+        void GetFPs(std::vector<int>& posList) const;
+        void GetParameter(int& browNum, int& eyeNum, int& noseNum, int& mouseNum, int& borderNum) const;
+        void GetEyeCenter(double& leftX, double& leftY, double& rightX, double& rightY) const;
+        void GetMouseCenter(double& x, double& y) const;
 
         ~FaceFeaturePoint();
 
@@ -71,6 +72,8 @@ namespace MagicApp
         cv::Mat GetImage(void);
         void GetImageSize(int* imgW, int* imgH);
         bool LoadFps(const std::string& fileName);
+        void AutoAlignFps(const std::vector<int>& markPosList); //3 mark point: 2 eyes, 1 mouse.
+        void AutoAlignFps(void);
         FaceFeaturePoint* GetFps(void);
         bool LoadRefImage(const std::string& fileName);
         cv::Mat GetRefImage(void);
@@ -91,6 +94,8 @@ namespace MagicApp
     private:
         void CalMeanFeature(const std::string& path, const std::vector<int>& imgIndex, std::vector<FaceFeaturePoint*>* fpsList,
             std::vector<cv::Point2f>* cvMeanFps);
+        void RigidFittingFps(const std::vector<cv::Point2f>& cvSrcList, const std::vector<cv::Point2f>& cvTargetList, 
+            std::vector<int>& fps);
 
     private:
         cv::Mat* mpImage;
