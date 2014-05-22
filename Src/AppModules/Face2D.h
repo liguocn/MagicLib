@@ -33,6 +33,7 @@ namespace MagicApp
         void MoveDelta(int deltaH, int deltaW);
         void GetDPs(std::vector<int>& posList) const; // h, w
         void GetFPs(std::vector<int>& posList) const;
+        void GetFPsNormal(std::vector<int>& norList) const;
         void GetParameter(int& browNum, int& eyeNum, int& noseNum, int& mouseNum, int& borderNum) const;
         void GetEyeCenter(double& leftX, double& leftY, double& rightX, double& rightY) const;
         void GetMouseCenter(double& x, double& y) const;
