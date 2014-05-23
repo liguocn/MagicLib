@@ -1,5 +1,6 @@
 #include "PrincipalComponentAnalysis.h"
 #include "Eigen/Eigenvalues"
+#include "Eigen/Dense"
 #include "../Tool/LogSystem.h"
 
 namespace MagicML
@@ -157,6 +158,44 @@ namespace MagicML
             }
         }
         return projectVec;
+    }
+
+    std::vector<double> PrincipalComponentAnalysis::TruncateFitting(const std::vector<double>& data, 
+        const std::vector<int>& dataIndex, double truncateCoef)
+    {
+        //fitting
+        int dataDim = dataIndex.size();
+        int solverDim = mPcaDim > dataDim ? dataDim : mPcaDim;
+        Eigen::MatrixXd matA(dataDim, solverDim);
+        Eigen::VectorXd vecB(dataDim, 1);
+        for (int rowId = 0; rowId < dataDim; rowId++)
+        {
+            int dataId = dataIndex.at(rowId);
+            for (int colId = 0; colId < solverDim; colId++)
+            {
+                matA(rowId, colId) = mEigenVectors.at(colId * mDataDim + dataId);
+            }
+            vecB(rowId) = data.at(rowId) - mMeanVector.at(dataId);
+        }
+        Eigen::MatrixXd matAT = matA.transpose();
+        Eigen::MatrixXd matCoefA = matAT * matA;
+        Eigen::MatrixXd vecCoefB = matAT * vecB;
+        Eigen::VectorXd res = matCoefA.ldlt().solve(vecCoefB);
+        
+        //copy result
+        std::vector<double> fitRes = mMeanVector;
+        for (int pcaId = 0; pcaId < solverDim; pcaId++)
+        {
+            double maxCoef = truncateCoef * sqrt(mEigenValues.at(pcaId));
+            double coef = res(pcaId) > maxCoef ? maxCoef : (res(pcaId) < -maxCoef ? -maxCoef : res(pcaId));
+            int baseIndex = pcaId * mDataDim;
+            for (int dimId = 0; dimId < mDataDim; dimId++)
+            {
+                fitRes.at(dimId) += mEigenVectors.at(baseIndex + dimId) * coef;
+            }
+        }
+
+        return fitRes;
     }
 
     void PrincipalComponentAnalysis::Load(const std::string& fileName)

@@ -16,6 +16,7 @@ namespace MagicML
         std::vector<double> GetMeanVector(void);
         std::vector<double> Project(const std::vector<double>& data);
         std::vector<double> TruncateProject(const std::vector<double>& data, double truncateCoef);
+        std::vector<double> TruncateFitting(const std::vector<double>& data, const std::vector<int>& dataIndex, double truncateCoef);
         void Load(const std::string& fileName);
         void Save(const std::string& fileName);
 

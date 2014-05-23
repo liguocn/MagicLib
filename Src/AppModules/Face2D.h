@@ -74,7 +74,8 @@ namespace MagicApp
         void GetImageSize(int* imgW, int* imgH);
         bool LoadFps(const std::string& fileName);
         void AutoAlignFps(const std::vector<int>& markPosList); //3 mark point: 2 eyes, 1 mouse.
-        void AutoAlignFps(void);
+        void RigidAutoAlignFps(void);
+        void PcaAutoAlignFps(const std::string& path, const std::vector<int>& imgIndex);
         FaceFeaturePoint* GetFps(void);
         bool LoadRefImage(const std::string& fileName);
         cv::Mat GetRefImage(void);
@@ -95,6 +96,8 @@ namespace MagicApp
     private:
         void CalMeanFeature(const std::string& path, const std::vector<int>& imgIndex, std::vector<FaceFeaturePoint*>* fpsList,
             std::vector<cv::Point2f>* cvMeanFps);
+        void FindNormalDirectionCorrespoindence(const cv::Mat& featureImg, const std::vector<int>& fpsList, 
+            const std::vector<int>& fpsNorList, std::vector<int>& dataList, std::vector<int>& refDataList, std::vector<int>& indexList);
         void RigidFittingFps(const std::vector<cv::Point2f>& cvSrcList, const std::vector<cv::Point2f>& cvTargetList, 
             std::vector<int>& fps);
 
