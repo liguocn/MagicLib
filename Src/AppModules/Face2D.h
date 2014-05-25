@@ -3,6 +3,8 @@
 #include <string>
 #include "opencv2/opencv.hpp"
 #include "../MachineLearning/PrincipalComponentAnalysis.h"
+#include "MagicObject.h"
+#include "FaceFeaturePoints.h"
 
 namespace MagicApp
 {

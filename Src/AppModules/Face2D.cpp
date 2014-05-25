@@ -17,16 +17,6 @@ namespace MagicApp
     {
     }
 
-    /*void FaceFeaturePoint::Load()
-    {
-        std::string fileName;
-        char filterName[] = "Feature Point Files(*.fp)\0*.fp\0";
-        if (MagicCore::ToolKit::FileOpenDlg(fileName, filterName))
-        {
-            Load(fileName);
-        }
-    }*/
-
     bool FaceFeaturePoint::Load(const std::string& fileName)
     {
         std::ifstream fin(fileName);
