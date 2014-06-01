@@ -230,6 +230,24 @@ namespace MagicApp
 
     void FaceFeaturePoint::Save(const std::string& fileName)
     {
+        //std::ofstream fout(fileName);
+        //fout << 2 << std::endl;
+        //fout << 
+        //fout << mFps.size() / mDim << std::endl;
+        //for (int fpsId = 0; fpsId < mFps.size(); fpsId++)
+        //{
+        //    fout << mFps.at(fpsId) << " ";
+        //}
+        //fout << mIsClose.size() << std::endl;
+        //for (int groupId = 0; groupId < mIsClose.size(); groupId++)
+        //{
+        //    fout << mIsClose.at(groupId) << " ";
+        //}
+        //for (int groupId = 0; groupId <= mStartIndex.size(); groupId++)
+        //{
+        //    fout << mStartIndex.at(groupId) << " ";
+        //}
+        //fout.close();
         std::ofstream fout(fileName);
         fout << mLeftBrowFPs.size() / 2 << " ";
         for (int fid = 0; fid < mLeftBrowFPs.size(); fid++)
@@ -267,6 +285,7 @@ namespace MagicApp
             fout << mBorderFPs.at(fid) << " ";
         }
         fout.close();
+
     }
 
     bool FaceFeaturePoint::Select(int hid, int wid)

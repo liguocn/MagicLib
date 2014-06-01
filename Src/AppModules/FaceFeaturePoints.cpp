@@ -60,7 +60,7 @@ namespace MagicApp
         }
         mStartIndex.clear();
         mStartIndex.resize(groupSize + 1);
-        for (int groupId = 0; groupId < groupSize; groupId++)
+        for (int groupId = 0; groupId < groupSize + 1; groupId++)
         {
             int startIndex;
             fin >> startIndex;
@@ -101,7 +101,7 @@ namespace MagicApp
         fout.close();
     }
 
-    void FaceFeaturePoints::GetDefaultDps(std::vector<double>* dpsList)
+    void FaceFeaturePoints::GetDefaultDps(std::vector<double>* dpsList) const 
     {
         std::vector<int> addSizeList(7);
         addSizeList.at(0) = 3;
@@ -122,6 +122,7 @@ namespace MagicApp
         {
             double addDelta = 1.0 / (addSizeList.at(groupId) + 1);
             int oneGroupSize = mStartIndex.at(groupId + 1) - mStartIndex.at(groupId);
+            DebugLog << "groupId: " << groupId << " groupSize: " << oneGroupSize << std::endl;
             for (int localFpsId = 0; localFpsId < oneGroupSize; localFpsId++)
             {
                 if (!mIsClose.at(groupId) && localFpsId == oneGroupSize - 1)

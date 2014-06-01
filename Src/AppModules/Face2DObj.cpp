@@ -79,7 +79,7 @@ namespace MagicApp
 
     MagicML::PrincipalComponentAnalysis* Face2DPCA::GetFeaturePca(void)
     {
-        return NULL;
+        return mpFeaturePca;
     }
 
     void Face2DPCA::DeformFeatureToMeanFace(const std::string& path, std::vector<int>& imgIndex)
@@ -246,7 +246,53 @@ namespace MagicApp
 
     void Face2DPCA::CalMeanFace(const std::string& path, std::vector<int>& imgIndex)
     {
-
+        DeformFeatureToMeanFace(path, imgIndex);
+        int imgW, imgH;
+        std::vector<int> sumBlue, sumGreen, sumRed;
+        int imgCount = imgIndex.size();
+        for (int imgId = 0; imgId < imgCount; imgId++)
+        {
+            //Load file
+            std::stringstream ss;
+            ss << path << "ToMean" << imgIndex.at(imgId) << ".jpg";
+            std::string imgName;
+            ss >> imgName;
+            cv::Mat img = cv::imread(imgName);
+            if (imgId == 0)
+            {
+                imgW = img.cols;
+                imgH = img.rows;
+                int imgSize = imgW * imgH;
+                sumBlue = std::vector<int>(imgSize, 0);
+                sumGreen = std::vector<int>(imgSize, 0);
+                sumRed = std::vector<int>(imgSize, 0);
+            }
+            for (int hid = 0; hid < imgH; hid++)
+            {
+                int baseIndex = hid * imgW;
+                for (int wid = 0; wid < imgW; wid++)
+                {
+                    unsigned char* pixel = img.ptr(hid, wid);
+                    sumBlue.at(baseIndex + wid) += pixel[0];
+                    sumGreen.at(baseIndex + wid) += pixel[1];
+                    sumRed.at(baseIndex + wid) += pixel[2];
+                }
+            }
+        }
+        cv::Mat meanImg(imgH, imgW, CV_8UC3);
+        for (int hid = 0; hid < imgH; hid++)
+        {
+            int baseIndex = hid * imgW;
+            for (int wid = 0; wid < imgW; wid++)
+            {
+                unsigned char* pixel = meanImg.ptr(hid, wid);
+                pixel[0] = float(sumBlue.at(baseIndex + wid)) / imgCount;
+                pixel[1] = float(sumGreen.at(baseIndex + wid)) / imgCount;
+                pixel[2] = float(sumRed.at(baseIndex + wid)) / imgCount;
+            }
+        }
+        std::string meanImgName = path + "Mean.jpg";
+        cv::imwrite(meanImgName, meanImg); 
     }
 
     Face2DObj::Face2DObj() :
@@ -320,7 +366,49 @@ namespace MagicApp
 
     void Face2DObj::DeformToFeature(const Face2DFeaturePoints& refFfp)
     {
+        //Calculate transform first
+        std::vector<double> fpsList, refFpsList;
+        mpFfp->GetFps(&fpsList);
+        refFfp.GetFps(&refFpsList);
+        int featureSize = fpsList.size() / 2;
+        std::vector<cv::Point2f> cvFpsList(featureSize);
+        std::vector<cv::Point2f> cvRefFpsList(featureSize);
+        for (int mid = 0; mid < featureSize; mid++)
+        {
+            cvFpsList.at(mid).x = fpsList.at(mid * 2 + 1);
+            cvFpsList.at(mid).y = fpsList.at(mid * 2);
+            cvRefFpsList.at(mid).x = refFpsList.at(mid * 2 + 1);
+            cvRefFpsList.at(mid).y = refFpsList.at(mid * 2);
+        }
+        cv::Mat transMat = cv::estimateRigidTransform(cvRefFpsList, cvFpsList, false);
+        MagicMath::HomoMatrix3 fpsTransform;
+        fpsTransform.SetValue(0, 0, transMat.at<double>(0, 0));
+        fpsTransform.SetValue(0, 1, transMat.at<double>(0, 1));
+        fpsTransform.SetValue(0, 2, transMat.at<double>(0, 2));
+        fpsTransform.SetValue(1, 0, transMat.at<double>(1, 0));
+        fpsTransform.SetValue(1, 1, transMat.at<double>(1, 1));
+        fpsTransform.SetValue(1, 2, transMat.at<double>(1, 2));
+        
+        //Deform image
+        std::vector<double> dpsList_d, refDpsList_d;
+        mpFfp->GetDefaultDps(&dpsList_d);
+        refFfp.GetDefaultDps(&refDpsList_d);
+        int dpsSize = dpsList_d.size() / 2;
+        std::vector<int> dpsList(dpsList_d.size());
+        std::vector<int> refDpsList(refDpsList_d.size());
+        for (int mid = 0; mid < dpsSize; mid++)
+        {
+            dpsList.at(mid * 2) = floor(dpsList_d.at(mid * 2 + 1) + 0.5);
+            dpsList.at(mid * 2 + 1) = floor(dpsList_d.at(mid * 2) + 0.5);
 
+            double xRes, yRes;
+            fpsTransform.TransformPoint(refDpsList_d.at(mid * 2 + 1), refDpsList_d.at(mid * 2), xRes, yRes);
+            refDpsList.at(mid * 2) = floor(xRes + 0.5);
+            refDpsList.at(mid * 2 + 1) = floor(yRes + 0.5);
+        }
+        cv::Mat deformImg = MagicDIP::Deformation::DeformByMovingLeastSquares(*mpImage, dpsList, refDpsList);
+        mpImage->release();
+        *mpImage = deformImg.clone();
     }
 
     void Face2DObj::ResizeImage(int width, int height, bool keepRatio)

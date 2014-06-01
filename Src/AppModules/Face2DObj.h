@@ -45,7 +45,7 @@ namespace MagicApp
         void DeformToFeaturePcaSpace(const MagicML::PrincipalComponentAnalysis& featurePca);
         void DeformToFeature(const Face2DFeaturePoints& refFfp);
 
-    public:
+    private:
         cv::Mat* mpImage;
         Face2DFeaturePoints* mpFfp;
     };
