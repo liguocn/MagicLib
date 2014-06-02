@@ -13,6 +13,8 @@ namespace MagicML
         static void MeanshiftValue(const std::vector<double>& sourceData, int dim, double h, 
                                    const std::vector<double>& inputData, std::vector<double>& resData);
         static void KMeansClustering(const std::vector<double>& sourceData, int dim, int k, std::vector<int>& clusterRes);
+        static void Spectral(const std::vector<double>& weights, int dim, int k, std::vector<int>& res);
+        static void SparseSubspace(const std::vector<double>& sourceData, int dim, int k, std::vector<int>& res);
 
     private:
         static void CalEigenVector(const std::vector<double>& inputData, int dim, const std::vector<int>& inputIndex, 

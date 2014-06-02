@@ -398,6 +398,16 @@ namespace MagicML
             centerData = newCenterData;
         }
     }
+    
+    void Clustering::Spectral(const std::vector<double>& weights, int dim, int k, std::vector<int>& res)
+    {
+        
+    }
+    
+    void Clustering::SparseSubspace(const std::vector<double>& sourceData, int dim, int k, std::vector<int>& res)
+    {
+        
+    }
 
     void Clustering::FindKMeansSeeds(const std::vector<double>& sourceData, int dim, int k, std::vector<double>& seedData)
     {
