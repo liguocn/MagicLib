@@ -13,7 +13,7 @@ namespace MagicML
     {
     }
 
-    void Clustering::OrchardBoumanClustering(const std::vector<double>& inputData, int dim, int k, std::vector<int>& clusterRes)
+    void Clustering::OrchardBouman(const std::vector<double>& inputData, int dim, int k, std::vector<int>& clusterRes)
     {
         std::vector<std::vector<double> > eigenVectorList(k);
         std::vector<double> eigenValueList(k);
@@ -282,7 +282,7 @@ namespace MagicML
         return 1.0;
     }
 
-    void Clustering::KMeansClustering(const std::vector<double>& sourceData, int dim, int k, std::vector<int>& clusterRes)
+    void Clustering::KMeans(const std::vector<double>& sourceData, int dim, int k, std::vector<int>& clusterRes)
     {
         //computer data bounding box size
         std::vector<double> BBoxMin(dim);
@@ -401,12 +401,68 @@ namespace MagicML
     
     void Clustering::Spectral(const std::vector<double>& weights, int dim, int k, std::vector<int>& res)
     {
-        
+        //Construct matrix L = D - W
+        Eigen::MatrixXd LMat(dim, dim);
+        for (int rid = 0; rid < dim; rid++)
+        {
+            double rowSum = 0.0;
+            int baseIndex = rid * dim;
+            for (int cid = 0; cid < dim; cid++)
+            {
+                rowSum += weights.at(baseIndex + cid);
+            }
+            for (int cid = 0; cid < dim; cid++)
+            {
+                LMat(rid, cid) = rowSum - weights.at(baseIndex + cid);
+            }
+        }
+
+        //Compute the first k eigen vectors
+        Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(LMat);
+
+        //Construct matrix U
+        std::vector<double> eigenSource(dim * k);
+        for (int dimId = 0; dimId < dim; dimId++)
+        {
+            int baseIndex = dimId * k;
+            for (int eigenId = 0; eigenId < k; eigenId++)
+            {
+                eigenSource.at(baseIndex + eigenId) = es.eigenvectors().col(dim - 1 - eigenId)(dimId);
+            }
+        }
+
+        //Cluster using k-means
+        KMeans(eigenSource, k, k, res);
     }
     
     void Clustering::SparseSubspace(const std::vector<double>& sourceData, int dim, int k, std::vector<int>& res)
     {
-        
+        //Construct adjacency matrix
+        int dataCount = sourceData.size() / dim;
+        std::vector<double> adjMat;
+        SpectralProjectGradient(sourceData, dim, 1, adjMat);
+        //Cluster using spectral method
+        Spectral(adjMat, dataCount, k, res);
+    }
+
+    void Clustering::MultiFeatureFuse(const std::vector<double>& sourceData, const std::vector<int>& dimList, 
+            int k, std::vector<int>& res)
+    {
+
+    }
+
+    void Clustering::SpectralProjectGradient(const std::vector<double>& sourceData, int dim, double lamda, std::vector<double>& adjMat)
+    {
+        int dataCount = sourceData.size() / dim;
+        adjMat.clear();
+        adjMat.resize(dataCount * dataCount);
+        int maxIterCount = 100;
+        std::vector<double> adjNew(dataCount * dataCount);
+        double theta = 1.0;
+        for (int iterId = 0; iterId < maxIterCount; iterId++)
+        {
+
+        }
     }
 
     void Clustering::FindKMeansSeeds(const std::vector<double>& sourceData, int dim, int k, std::vector<double>& seedData)

@@ -18,7 +18,7 @@ namespace MagicML
         
     private:
         int mDataDim;
-        int mClusterDim;
+        int mBaseNum;
         std::vector<double> mBaseList;
     };
 }

@@ -45,8 +45,8 @@ namespace MagicDIP
         int k = 5;
         std::vector<int> fClusterRes;
         std::vector<int> bClusterRes;
-        MagicML::Clustering::OrchardBoumanClustering(forgroundData, dim, k, fClusterRes);
-        MagicML::Clustering::OrchardBoumanClustering(backgroundData, dim, k, bClusterRes);
+        MagicML::Clustering::OrchardBouman(forgroundData, dim, k, fClusterRes);
+        MagicML::Clustering::OrchardBouman(backgroundData, dim, k, bClusterRes);
         MagicML::GaussianMixtureModel fGmm;
         fGmm.CalParameter(forgroundData, dim, k, fClusterRes);
         MagicML::GaussianMixtureModel bGmm;
