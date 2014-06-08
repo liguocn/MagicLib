@@ -1,12 +1,8 @@
 #include "SupportVectorMachine.h"
+#include "KernelFunction.h"
 
 namespace MagicML
 {
-
-    KernelFunction::KernelFunction()
-    {
-    }
-
     SupportVectorMachine::SupportVectorMachine() :
         mpKernel(NULL),
         mB(0),
