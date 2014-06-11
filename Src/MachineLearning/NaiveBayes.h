@@ -10,8 +10,11 @@ namespace MagicML
         NaiveBayes();
         ~NaiveBayes();
         
-        void Learn(const std::vector<double>& dataX, const std::vector<int>& dataY);
-        int Predict(const std::vector<double>& dataX);
+        int Learn(const std::vector<double>& dataX, const std::vector<int>& dataY, int categoryCount);
+        int Predict(const std::vector<double>& dataX) const;
+
+    private:
+        void Reset(void);
 
     private:
         std::vector<double> mCategoryProList;
