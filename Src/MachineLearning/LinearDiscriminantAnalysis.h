@@ -3,20 +3,22 @@
 
 namespace MagicML
 {
-    class KernelFunction;
     class LinearDiscriminantAnalysis
     {
     public:
         LinearDiscriminantAnalysis();
         ~LinearDiscriminantAnalysis();
         
-        void Learn(const std::vector<double>& dataX, const std::vector<int>& dataY, int categoryCount, KernelFunction* kernel);
-        int Predict(const std::vector<double>& dataX) const;
+        int Analyse(const std::vector<double>& dataX, const std::vector<int>& dataY, int ldaDim);
+        std::vector<double> GetLdaVector(int k) const;
+        std::vector<double> Project(const std::vector<double>& data) const;
         
     private:
         void Reset(void);
         
     private:
-        KernelFunction* mpKernel;
+        int mDataDim;
+        int mLdaDim;
+        std::vector<double> mLdaVectors;
     };
 }

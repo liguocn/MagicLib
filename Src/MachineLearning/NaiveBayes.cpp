@@ -32,10 +32,14 @@ namespace MagicML
     int NaiveBayes::Learn(const std::vector<double>& dataX, const std::vector<int>& dataY, int categoryCount)
     {
         Reset();
-        int dataDim = dataX.size() / dataY.size();
         int dataCount = dataY.size();
+        if (dataCount == 0)
+        {
+            return MAGIC_EMPTY_INPUT;
+        }
+        int dataDim = dataX.size() / dataCount;
         //check invalid input
-        if (categoryCount < 2 || dataDim * dataY.size() != dataX.size() || dataCount == 0)
+        if (categoryCount < 2 || dataDim * dataY.size() != dataX.size())
         {
             return MAGIC_INVALID_INPUT;
         }
