@@ -2,6 +2,8 @@
 #include "../MachineLearning/NaiveBayes.h"
 #include "../MachineLearning/KernelFunction.h"
 #include "../MachineLearning/SupportVectorMachine.h"
+#include "../MachineLearning/LinearDiscriminantAnalysis.h"
+#include "../MachineLearning/PrincipalComponentAnalysis.h"
 #include "../Tool/ErrorCodes.h"
 #include "../Tool/LogSystem.h"
 
@@ -12,7 +14,9 @@ namespace MagicApp
         mDataX(),
         mDataY(),
         mpNaiveBayes(NULL),
-        mpSVM(NULL)
+        mpSVM(NULL),
+        mpLDA(NULL),
+        mpPCA(NULL)
     {
     }
 
@@ -33,6 +37,16 @@ namespace MagicApp
         {
             delete mpSVM;
             mpSVM = NULL;
+        }
+        if (mpLDA != NULL)
+        {
+            delete mpLDA;
+            mpLDA = NULL;
+        }
+        if (mpPCA != NULL)
+        {
+            delete mpPCA;
+            mpPCA = NULL;
         }
     }
 
@@ -174,5 +188,41 @@ namespace MagicApp
         {
             return 0;
         }
+    }
+
+    void SimpleMLObj::LearnLDA(void)
+    {
+        if (mpLDA == NULL)
+        {
+            mpLDA = new MagicML::LinearDiscriminantAnalysis;
+        }
+        int errorCode = mpLDA->Analyse(mDataX, mDataY, 1);
+        if (errorCode == MAGIC_NO_ERROR)
+        {
+            DebugLog << "SimpleMLObj::LearnLDA success" << std::endl;
+        }
+        else
+        {
+            DebugLog << "SimpleMLObj::LearnLDA fail, error code: " << errorCode << std::endl;
+        }
+    }
+    
+    std::vector<double> SimpleMLObj::GetLdaVector(void)
+    {
+        return mpLDA->GetLdaVector(0);
+    }
+
+    void SimpleMLObj::LearnPCA(void)
+    {
+        if (mpPCA == NULL)
+        {
+            mpPCA = new MagicML::PrincipalComponentAnalysis;
+        }
+        mpPCA->Analyse(mDataX, 2, 1);
+    }
+
+    std::vector<double> SimpleMLObj::GetPcaVector(void)
+    {
+        return mpPCA->GetEigenVector(0);
     }
 }

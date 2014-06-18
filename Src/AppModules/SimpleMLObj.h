@@ -6,6 +6,8 @@ namespace MagicML
 {
     class NaiveBayes;
     class SupportVectorMachine;
+    class LinearDiscriminantAnalysis;
+    class PrincipalComponentAnalysis;
 }
 
 namespace MagicApp
@@ -29,12 +31,20 @@ namespace MagicApp
         void LearnSVM(void);
         int PrediectBySVM(double x0, double x1);
 
+        void LearnLDA(void);
+        std::vector<double> GetLdaVector(void);
+
+        void LearnPCA(void);
+        std::vector<double> GetPcaVector(void);
+
     private:
         int mDataDim;
         std::vector<double> mDataX;
         std::vector<int> mDataY;
         MagicML::NaiveBayes* mpNaiveBayes;
         MagicML::SupportVectorMachine* mpSVM;
+        MagicML::LinearDiscriminantAnalysis* mpLDA;
+        MagicML::PrincipalComponentAnalysis* mpPCA;
     };
 
 }

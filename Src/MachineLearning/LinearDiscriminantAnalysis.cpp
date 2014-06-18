@@ -1,6 +1,7 @@
 #include "LinearDiscriminantAnalysis.h"
-#include "../Tool/ErrorCodes.h"
 #include <map>
+#include "../Tool/ErrorCodes.h"
+#include "../Tool/LogSystem.h"
 #include "Eigen/Eigenvalues"
 #include "Eigen/Dense"
 
@@ -62,10 +63,10 @@ namespace MagicML
         }
         std::vector<double> meanVecList(mDataDim * catCount, 0);
         std::vector<int> catoNumList(catCount);
-        int catoId = 0;
+        int catId = 0;
         for (std::map<int, std::vector<int> >::iterator mapItr = catogeryMap.begin(); mapItr != catogeryMap.end(); mapItr++)
         {
-            int meanBaseId = catoId * mDataDim;
+            int meanBaseId = catId * mDataDim;
             for (std::vector<int>::iterator vecItr = mapItr->second.begin(); vecItr != mapItr->second.end(); vecItr++)
             {
                 int vecBaseIndex = *vecItr * mDataDim;
@@ -74,10 +75,10 @@ namespace MagicML
                     meanVecList.at(meanBaseId + did) += dataX.at(vecBaseIndex + did);
                 }
             }
-            catoNumList.at(catoId) = mapItr->second.size();
+            catoNumList.at(catId) = mapItr->second.size();
             for (int did = 0; did < mDataDim; did++)
             {
-                meanVecList.at(meanBaseId + did) /= catoNumList.at(catoId);
+                meanVecList.at(meanBaseId + did) /= catoNumList.at(catId);
             }
             std::vector<double> deltaData(mDataDim);
             for (std::vector<int>::iterator vecItr = mapItr->second.begin(); vecItr != mapItr->second.end(); vecItr++)
@@ -95,14 +96,16 @@ namespace MagicML
                     }
                 }
             }
-            catoId++;
+            catId++;
         }
+        matW = matW / dataCount;
         //regularization of matW
         double lamda = 1.0e-15;
         for (int did = 0; did < mDataDim; did++)
         {
             matW(did, did) += lamda;
         }
+
         std::vector<double> totalMeanVec(mDataDim, 0);
         for (int catoId = 0; catoId < catCount; catoId++)
         {
@@ -132,13 +135,37 @@ namespace MagicML
                 }
             }
         }
-        Eigen::MatrixXd matWRev = matW.reverse();
+        matB = matB / dataCount;
+        
+        Eigen::MatrixXd matWRev = matW.inverse();
         Eigen::MatrixXd matEigen = matWRev * matB;
         Eigen::EigenSolver<Eigen::MatrixXd> es(matEigen);
+        //sort eigen values
+        std::vector<int> sortIndex(mDataDim);
+        for (int dataId = 0; dataId < mDataDim; dataId++)
+        {
+            sortIndex.at(dataId) = dataId;
+        }
+        for (int sortId = 0; sortId < mLdaDim; sortId++)
+        {
+            int maxId = sortId;
+            double maxV = -1;
+            for (int dataId = sortId; dataId < mDataDim; dataId++)
+            {
+                if (es.eigenvalues()(sortIndex.at(dataId)).real() > maxV)
+                {
+                    maxV = es.eigenvalues()(sortIndex.at(dataId)).real();
+                    maxId = dataId;
+                }
+            }
+            int nTemp = sortIndex.at(sortId);
+            sortIndex.at(sortId) = sortIndex.at(maxId);
+            sortIndex.at(maxId) = nTemp;
+        }
         mLdaVectors.resize(mLdaDim * mDataDim);
         for (int ldaId = 0; ldaId < mLdaDim; ldaId++)
         {
-            Eigen::VectorXcd eigVec = es.eigenvectors().col(mDataDim - 1 - ldaId);
+            Eigen::VectorXcd eigVec = es.eigenvectors().col(sortIndex.at(ldaId));
             int baseIndex = ldaId * mDataDim;
             for (int did = 0; did < mDataDim; did++)
             {
