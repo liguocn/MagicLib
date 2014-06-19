@@ -1,5 +1,6 @@
 #include "Clustering.h"
 #include "../Tool/LogSystem.h"
+#include "../Math/DenseMatrix.h"
 #include "Eigen/Eigenvalues"
 #include "flann/flann.h"
 
@@ -454,15 +455,75 @@ namespace MagicML
     void Clustering::SpectralProjectGradient(const std::vector<double>& sourceData, int dim, double lamda, std::vector<double>& adjMat)
     {
         int dataCount = sourceData.size() / dim;
-        adjMat.clear();
-        adjMat.resize(dataCount * dataCount);
-        int maxIterCount = 100;
-        std::vector<double> adjNew(dataCount * dataCount);
+        std::vector<double> square2X(dataCount * dataCount);
+        for (int rid = 0; rid < dataCount; rid++)
+        {
+            for (int cid = 0; cid <= rid; cid++)
+            {
+                double v = 0.0;
+                int rBaseIndex = rid * dim;
+                int cBaseIndex = cid * dim;
+                for (int did = 0; did < dim; did++)
+                {
+                    v += sourceData.at(rBaseIndex + did) * sourceData.at(cBaseIndex + did) * 2.0;
+                }
+                square2X.at(rid * dataCount + cid) = v;
+                square2X.at(cid * dataCount + rid) = v;
+            }
+        }
+        MagicMath::DenseMatrix square2XMat(dataCount, dataCount, square2X);
+        square2X.clear();
+        MagicMath::DenseMatrix eMat(dataCount, dataCount, 1);
+        MagicMath::DenseMatrix zMat(dataCount, dataCount, 0);
+        MagicMath::DenseMatrix zNewMat(dataCount, dataCount, 0);
+        MagicMath::DenseMatrix dMat(dataCount, dataCount, 0);
+        MagicMath::DenseMatrix deltaFMat(dataCount, dataCount, 0);
+        MagicMath::DenseMatrix deltaNewFMat(dataCount, dataCount, 0);
         double theta = 1.0;
+        double tao1 = 1.0;
+        double tao2 = 1.0;
+        int maxIterCount = 100;
         for (int iterId = 0; iterId < maxIterCount; iterId++)
         {
-
+            //Calculate matDeltaF
+            deltaFMat = square2XMat * zMat - square2XMat + zMat * eMat * (2 * lamda); 
+            //Calculate matD
+            MagicMath::DenseMatrix matTemp = zMat - deltaFMat * theta;
+            std::vector<double> projData = matTemp.GetValues();
+            for (std::vector<double>::iterator itr = projData.begin(); itr != projData.end(); itr++)
+            {
+                if (*itr < 0)
+                {
+                    *itr = 0;
+                }
+            }
+            for (int digId = 0; digId < dataCount; digId++)
+            {
+                projData.at(digId * dataCount + digId) = 0;
+            }
+            dMat = matTemp - zMat;
+            //Calculate ro
+            //double ro = 0;
+            MagicMath::DenseMatrix xxdMat = square2XMat * dMat * 0.5;
+            MagicMath::DenseMatrix deMat = dMat * eMat;
+            MagicMath::DenseMatrix dTMat = dMat.Transpose();
+            double a = (dTMat * xxdMat).Trace() + lamda * (dTMat * deMat).Trace();
+            dTMat.Reset();
+            MagicMath::DenseMatrix zTMat = zMat.Transpose();
+            double b = 2 * (zTMat * xxdMat).Trace() - 2 * xxdMat.Trace() + 2 * lamda * (zTMat * deMat).Trace();
+            zTMat.Reset();
+            double ro = -b / (2.0 * a);
+            //Calculate adjNew
+            zNewMat = zMat + dMat * ro;
+            //Update theta
+            deltaNewFMat = square2XMat * zNewMat - square2XMat + zNewMat * eMat * (2 * lamda); 
+            MagicMath::DenseMatrix sMat = zNewMat - zMat;
+            MagicMath::DenseMatrix yMat = deltaNewFMat - deltaFMat;
+            theta = yMat.InnerProduct(yMat) / sMat.InnerProduct(yMat);
+            //test whether to stop
         }
+        //copy result
+        adjMat = zNewMat.GetValues();
     }
 
     void Clustering::FindKMeansSeeds(const std::vector<double>& sourceData, int dim, int k, std::vector<double>& seedData)
