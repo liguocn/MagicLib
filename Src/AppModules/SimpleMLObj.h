@@ -8,6 +8,7 @@ namespace MagicML
     class SupportVectorMachine;
     class LinearDiscriminantAnalysis;
     class PrincipalComponentAnalysis;
+    class LogisticRegression;
 }
 
 namespace MagicApp
@@ -37,6 +38,9 @@ namespace MagicApp
         void LearnPCA(void);
         std::vector<double> GetPcaVector(void);
 
+        void LearnLR(void);
+        int PrediectByLR(double x0, double x1);
+
     private:
         int mDataDim;
         std::vector<double> mDataX;
@@ -45,6 +49,7 @@ namespace MagicApp
         MagicML::SupportVectorMachine* mpSVM;
         MagicML::LinearDiscriminantAnalysis* mpLDA;
         MagicML::PrincipalComponentAnalysis* mpPCA;
+        MagicML::LogisticRegression* mpLR;
     };
 
 }

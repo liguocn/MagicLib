@@ -4,6 +4,7 @@
 #include "../MachineLearning/SupportVectorMachine.h"
 #include "../MachineLearning/LinearDiscriminantAnalysis.h"
 #include "../MachineLearning/PrincipalComponentAnalysis.h"
+#include "../MachineLearning/LogisticRegression.h"
 #include "../Tool/ErrorCodes.h"
 #include "../Tool/LogSystem.h"
 
@@ -16,7 +17,8 @@ namespace MagicApp
         mpNaiveBayes(NULL),
         mpSVM(NULL),
         mpLDA(NULL),
-        mpPCA(NULL)
+        mpPCA(NULL),
+        mpLR(NULL)
     {
     }
 
@@ -47,6 +49,11 @@ namespace MagicApp
         {
             delete mpPCA;
             mpPCA = NULL;
+        }
+        if (mpLR != NULL)
+        {
+            delete mpLR;
+            mpLR = NULL;
         }
     }
 
@@ -188,6 +195,36 @@ namespace MagicApp
         {
             return 0;
         }
+    }
+
+    void SimpleMLObj::LearnLR(void)
+    {
+        if (mpLR == NULL)
+        {
+            mpLR = new MagicML::LogisticRegression;
+        }
+        int errorCode = mpLR->Learn(mDataX, mDataY);
+        if (errorCode == MAGIC_NO_ERROR)
+        {
+            DebugLog << "SimpleMLObj::LearnLR success" << std::endl;
+        }
+        else
+        {
+            DebugLog << "SimpleMLObj::LearnLR fail, error code: " << errorCode << std::endl;
+        }
+    }
+        
+    int SimpleMLObj::PrediectByLR(double x0, double x1)
+    {
+        if (mpLR == NULL)
+        {
+            DebugLog << "Error: Naive Bayes has not been trained." << std::endl;
+            return MAGIC_NON_INITIAL;
+        }
+        std::vector<double> dataX(2);
+        dataX.at(0) = x0;
+        dataX.at(1) = x1;
+        return mpLR->Predict(dataX);
     }
 
     void SimpleMLObj::LearnLDA(void)

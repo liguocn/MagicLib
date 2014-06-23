@@ -9,8 +9,11 @@ namespace MagicML
         LogisticRegression();
         ~LogisticRegression();
 
-        void Learn(const std::vector<double>& dataX, const std::vector<double>& dataY);
+        int Learn(const std::vector<double>& dataX, const std::vector<int>& dataY);
         double Predict(const std::vector<double>& dataX) const;
+
+    private:
+        double EnergeValue(const std::vector<double>& dataX, const std::vector<int>& dataY, const std::vector<double>& coef) const;
 
     private:
         std::vector<double> mCoef;
