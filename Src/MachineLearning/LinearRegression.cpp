@@ -81,6 +81,11 @@ namespace MagicML
         return mOutputDim;
     }
 
+    std::vector<double> LinearRegression::GetRegMat(void) const
+    {
+        return mRegMat;
+    }
+
     void LinearRegression::Reset()
     {
         mInputDim = 0;

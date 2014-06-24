@@ -14,6 +14,7 @@ namespace MagicML
 
     private:
         double EnergeValue(const std::vector<double>& dataX, const std::vector<int>& dataY, const std::vector<double>& coef) const;
+        void LearnInitValue(const std::vector<double>& dataX, const std::vector<int>& dataY);
 
     private:
         std::vector<double> mCoef;

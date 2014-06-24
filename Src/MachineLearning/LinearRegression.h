@@ -13,6 +13,7 @@ namespace MagicML
         std::vector<double> Predict(const std::vector<double>& input);
         int GetInputDim(void);
         int GetOutputDim(void);
+        std::vector<double> GetRegMat(void) const;
 
     private:
         void Reset(void);

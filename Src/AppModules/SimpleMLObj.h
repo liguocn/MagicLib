@@ -9,6 +9,7 @@ namespace MagicML
     class LinearDiscriminantAnalysis;
     class PrincipalComponentAnalysis;
     class LogisticRegression;
+    class LinearRegression;
 }
 
 namespace MagicApp
@@ -41,6 +42,9 @@ namespace MagicApp
         void LearnLR(void);
         int PrediectByLR(double x0, double x1);
 
+        void LearnLinearRegression(void);
+        int PrediectByLinearRegression(double x0, double x1);
+
     private:
         int mDataDim;
         std::vector<double> mDataX;
@@ -50,6 +54,7 @@ namespace MagicApp
         MagicML::LinearDiscriminantAnalysis* mpLDA;
         MagicML::PrincipalComponentAnalysis* mpPCA;
         MagicML::LogisticRegression* mpLR;
+        MagicML::LinearRegression* mpLinearRegression;
     };
 
 }

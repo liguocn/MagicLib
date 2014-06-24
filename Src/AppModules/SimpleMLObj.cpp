@@ -5,6 +5,7 @@
 #include "../MachineLearning/LinearDiscriminantAnalysis.h"
 #include "../MachineLearning/PrincipalComponentAnalysis.h"
 #include "../MachineLearning/LogisticRegression.h"
+#include "../MachineLearning/LinearRegression.h"
 #include "../Tool/ErrorCodes.h"
 #include "../Tool/LogSystem.h"
 
@@ -18,7 +19,8 @@ namespace MagicApp
         mpSVM(NULL),
         mpLDA(NULL),
         mpPCA(NULL),
-        mpLR(NULL)
+        mpLR(NULL),
+        mpLinearRegression(NULL)
     {
     }
 
@@ -54,6 +56,11 @@ namespace MagicApp
         {
             delete mpLR;
             mpLR = NULL;
+        }
+        if (mpLinearRegression != NULL)
+        {
+            delete mpLinearRegression;
+            mpLinearRegression = NULL;
         }
     }
 
@@ -218,13 +225,55 @@ namespace MagicApp
     {
         if (mpLR == NULL)
         {
-            DebugLog << "Error: Naive Bayes has not been trained." << std::endl;
+            DebugLog << "Error: Logistic Regression has not been trained." << std::endl;
             return MAGIC_NON_INITIAL;
         }
         std::vector<double> dataX(2);
         dataX.at(0) = x0;
         dataX.at(1) = x1;
-        return mpLR->Predict(dataX);
+        if (mpLR->Predict(dataX) > 0.5)
+        {
+            return 1;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+
+    void SimpleMLObj::LearnLinearRegression(void)
+    {
+        if (mpLinearRegression == NULL)
+        {
+            mpLinearRegression = new MagicML::LinearRegression;
+        }
+        std::vector<double> dataY(mDataY.size());
+        for (int dataId = 0; dataId < mDataY.size(); dataId++)
+        {
+            dataY.at(dataId) = mDataY.at(dataId);
+        }
+        mpLinearRegression->Learn(mDataX, dataY, dataY.size());
+    }
+
+    int SimpleMLObj::PrediectByLinearRegression(double x0, double x1)
+    {
+        if (mpLinearRegression == NULL)
+        {
+            DebugLog << "Error: Linear Regression has not been trained." << std::endl;
+            return MAGIC_NON_INITIAL;
+        }
+        std::vector<double> dataX(2);
+        dataX.at(0) = x0;
+        dataX.at(1) = x1;
+        std::vector<double> res = mpLinearRegression->Predict(dataX);
+        if (res.at(0) > 0.5)
+        {
+            return 1;
+        }
+        else
+        {
+            return 0;
+        }
     }
 
     void SimpleMLObj::LearnLDA(void)
