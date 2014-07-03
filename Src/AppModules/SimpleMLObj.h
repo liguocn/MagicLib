@@ -10,6 +10,7 @@ namespace MagicML
     class PrincipalComponentAnalysis;
     class LogisticRegression;
     class LinearRegression;
+    class DecisionTree;
 }
 
 namespace MagicApp
@@ -45,6 +46,9 @@ namespace MagicApp
         void LearnLinearRegression(void);
         int PrediectByLinearRegression(double x0, double x1);
 
+        void LearnDT(double cutX0, double cutX1);
+        int PrediectByDT(double x0, double x1);
+
     private:
         int mDataDim;
         std::vector<double> mDataX;
@@ -55,6 +59,8 @@ namespace MagicApp
         MagicML::PrincipalComponentAnalysis* mpPCA;
         MagicML::LogisticRegression* mpLR;
         MagicML::LinearRegression* mpLinearRegression;
+        int mDTCutX0, mDTCutX1;
+        MagicML::DecisionTree* mpDecisionTree;
     };
 
 }

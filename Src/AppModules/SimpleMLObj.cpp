@@ -6,6 +6,7 @@
 #include "../MachineLearning/PrincipalComponentAnalysis.h"
 #include "../MachineLearning/LogisticRegression.h"
 #include "../MachineLearning/LinearRegression.h"
+#include "../MachineLearning/DecisionTree.h"
 #include "../Tool/ErrorCodes.h"
 #include "../Tool/LogSystem.h"
 
@@ -20,7 +21,10 @@ namespace MagicApp
         mpLDA(NULL),
         mpPCA(NULL),
         mpLR(NULL),
-        mpLinearRegression(NULL)
+        mpLinearRegression(NULL),
+        mDTCutX0(0),
+        mDTCutX1(0),
+        mpDecisionTree(NULL)
     {
     }
 
@@ -61,6 +65,11 @@ namespace MagicApp
         {
             delete mpLinearRegression;
             mpLinearRegression = NULL;
+        }
+        if (mpDecisionTree != NULL)
+        {
+            delete mpDecisionTree;
+            mpDecisionTree = NULL;
         }
     }
 
@@ -239,6 +248,45 @@ namespace MagicApp
         {
             return 0;
         }
+    }
+
+    void SimpleMLObj::LearnDT(double cutX0, double cutX1)
+    {
+        mDTCutX0 = cutX0;
+        mDTCutX1 = cutX1;
+        if (mpDecisionTree == NULL)
+        {
+            mpDecisionTree = new MagicML::DecisionTree;
+        }
+        int dataSize = mDataX.size() / mDataDim;
+        std::vector<bool> dataX(mDataX.size());
+        for (int dataId = 0; dataId < dataSize; dataId++)
+        {
+            dataX.at(dataId * mDataDim) = mDataX.at(dataId * mDataDim) > cutX0;
+            dataX.at(dataId * mDataDim + 1) = mDataX.at(dataId * mDataDim + 1) > cutX1;
+        }
+        int errorCode = mpDecisionTree->Learn(dataX, mDataY);
+        if (errorCode == MAGIC_NO_ERROR)
+        {
+            DebugLog << "SimpleMLObj::LearnDT success" << std::endl;
+        }
+        else
+        {
+            DebugLog << "SimpleMLObj::LearnDT fail, error code: " << errorCode << std::endl;
+        }
+    }
+        
+    int SimpleMLObj::PrediectByDT(double x0, double x1)
+    {
+        if (mpDecisionTree == NULL)
+        {
+            DebugLog << "Error: Decision Tree has not been trained." << std::endl;
+            return MAGIC_NON_INITIAL;
+        }
+        std::vector<bool> dataX(2);
+        dataX.at(0) = x0 > mDTCutX0;
+        dataX.at(1) = x1 > mDTCutX1;
+        return mpDecisionTree->Predict(dataX);
     }
 
     void SimpleMLObj::LearnLinearRegression(void)
