@@ -343,6 +343,15 @@ namespace MagicApp
         return mpFfp->Load(fileName);
     }
 
+    bool Face2DObj::LoadLandFfp(const std::string& fileName, int imgH)
+    {
+        if (mpFfp == NULL)
+        {
+            mpFfp = new Face2DFeaturePoints;
+        }
+        return mpFfp->LoadLandFile(fileName, imgH);
+    }
+
     Face2DFeaturePoints* Face2DObj::GetFfp(void)
     {
         return mpFfp;

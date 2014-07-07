@@ -12,9 +12,10 @@ namespace MagicApp
         virtual ~FaceFeaturePoints();
 
         bool Load(const std::string& fileName);
+        bool LoadLandFile(const std::string& fileName, int imgH);
         void Set(int dim, const std::vector<double>& fpsList, const FaceFeaturePoints* pRefFfp);
         void Save(const std::string& fileName) const;
-        void GetDefaultDps(std::vector<double>* dpsList) const ;
+        void GetDefaultDps(std::vector<double>* dpsList) const;
         void GetDps(const std::vector<int>& addSizeList, std::vector<double>* dpsList) const; // h, w
         void GetFps(std::vector<double>* fpsList) const;
         void GetParameter(std::vector<int>* startIndex, std::vector<bool>* isClose) const;

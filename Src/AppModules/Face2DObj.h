@@ -37,6 +37,7 @@ namespace MagicApp
         cv::Mat GetFaceImage(void);
         void ResizeImage(int width, int height, bool keepRatio);
         bool LoadFfp(const std::string& fileName);
+        bool LoadLandFfp(const std::string& fileName, int imgH);
         Face2DFeaturePoints* GetFfp(void);
         void SaveFfp(const std::string& fileName);
 

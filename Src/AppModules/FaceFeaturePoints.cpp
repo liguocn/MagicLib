@@ -70,6 +70,64 @@ namespace MagicApp
         return true;
     }
 
+    bool FaceFeaturePoints::LoadLandFile(const std::string& fileName, int imgH)
+    {
+        std::ifstream fin(fileName);
+        if (!fin.is_open())
+        {
+            return false;
+        }
+        int fpsSize;
+        fin >> fpsSize;
+        mDim = 2;
+        mFps.clear();
+        mFps.resize(fpsSize * mDim);
+        for (int fpsId = 0; fpsId < fpsSize; fpsId++)
+        {
+            double x, y;
+            fin >> x >> y;
+            mFps.at(fpsId * 2) = imgH - y;
+            mFps.at(fpsId * 2 + 1) = x;
+        }
+        mIsClose.clear();
+        mIsClose.push_back(false);
+        mStartIndex.clear();
+        mStartIndex.push_back(0);
+        mStartIndex.push_back(fpsSize);
+        /*mIsClose.clear();
+        mIsClose.resize(12);
+        mIsClose.at(0) = false;
+        mIsClose.at(1) = true;
+        mIsClose.at(2) = true;
+        mIsClose.at(3) = true;
+        mIsClose.at(4) = true;
+        mIsClose.at(5) = false;
+        mIsClose.at(6) = false;
+        mIsClose.at(7) = false;
+        mIsClose.at(8) = true;
+        mIsClose.at(9) = false;
+        mIsClose.at(10) = false;
+        mIsClose.at(11) = false;
+        mStartIndex.clear();
+        mStartIndex.resize(13);
+        mStartIndex.at(0) = 0;
+        mStartIndex.at(1) = 15;
+        mStartIndex.at(2) = 21;
+        mStartIndex.at(3) = 27;
+        mStartIndex.at(4) = 31;
+        mStartIndex.at(5) = 35;
+        mStartIndex.at(6) = 44;
+        mStartIndex.at(7) = 45;
+        mStartIndex.at(8) = 46;
+        mStartIndex.at(9) = 58;
+        mStartIndex.at(10) = 61;
+        mStartIndex.at(10) = 64;
+        mStartIndex.at(12) = fpsSize;*/
+        fin.close();
+
+        return true;
+    }
+
     void FaceFeaturePoints::Set(int dim, const std::vector<double>& fpsList, const FaceFeaturePoints* pRefFfp)
     {
         mDim = dim;
@@ -112,6 +170,20 @@ namespace MagicApp
         addSizeList.at(5) = 2;
         addSizeList.at(6) = 10;
         GetDps(addSizeList, dpsList);
+        /*std::vector<int> addSizeList(12);
+        addSizeList.at(0) = 1;
+        addSizeList.at(1) = 1;
+        addSizeList.at(2) = 1;
+        addSizeList.at(3) = 1;
+        addSizeList.at(4) = 1;
+        addSizeList.at(5) = 1;
+        addSizeList.at(6) = 1;
+        addSizeList.at(7) = 1;
+        addSizeList.at(8) = 1;
+        addSizeList.at(9) = 1;
+        addSizeList.at(10) = 1;
+        addSizeList.at(11) = 1;
+        GetDps(addSizeList, dpsList);*/
     }
 
     void FaceFeaturePoints::GetDps(const std::vector<int>& addSizeList, std::vector<double>* dpsList) const
