@@ -5,3 +5,4 @@
 #define MAGIC_INVALID_INPUT   -2
 #define MAGIC_NON_INITIAL     -3
 #define MAGIC_STOP_ITERATION  -4
+#define MAGIC_INVALID_RESULT  -5

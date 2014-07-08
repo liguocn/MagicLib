@@ -121,8 +121,15 @@ namespace MagicML
         catCount++;
 
         mpRootNode = ConstructTree(dataX, dataY, catCount, featureValidFlag);
-        
-        return MAGIC_NO_ERROR;
+
+        if (mpRootNode != NULL)
+        {
+            return MAGIC_NO_ERROR;
+        }
+        else
+        {
+            return MAGIC_INVALID_RESULT;
+        }
     }
     
     int DecisionTree::Predict(const std::vector<bool>& dataX) const
