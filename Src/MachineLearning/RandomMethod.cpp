@@ -12,7 +12,7 @@ namespace MagicML
         mFeatureId(-1),
         mpLeftNode(NULL),
         mpRightNode(NULL),
-        mPrediction(0)
+        mPredictions()
     {
     }
 
@@ -30,11 +30,11 @@ namespace MagicML
         }
     }
 
-    double TreeNode::Predict(const std::vector<bool>& dataX) const
+    std::vector<double> TreeNode::Predict(const std::vector<bool>& dataX) const
     {
         if (mFeatureId == -1)
         {
-            return mPrediction;
+            return mPredictions;
         }
         else if (dataX.at(mFeatureId))
         {
@@ -44,7 +44,7 @@ namespace MagicML
             }
             else
             {
-                return mPrediction;
+                return mPredictions;
             }
         }
         else
@@ -55,7 +55,7 @@ namespace MagicML
             }
             else
             {
-                return mPrediction;
+                return mPredictions;
             }
         }
     }
@@ -65,9 +65,9 @@ namespace MagicML
         mFeatureId = featureId;
     }
 
-    void TreeNode::SetPrediction(double prediction)
+    void TreeNode::SetPredictions(const std::vector<double>& prediction)
     {
-        mPrediction = prediction;
+        mPredictions = prediction;
     }
         
     void TreeNode::SetLeftNode(TreeNode* pNode)
@@ -98,20 +98,24 @@ namespace MagicML
         Reset();
     }
 
-    int RandomTree::Learn(const std::vector<bool>& dataX, const std::vector<double>& dataY, int depth)
+    int RandomTree::Learn(const std::vector<bool>& dataX, int xDim, const std::vector<double>& dataY, int yDim, int depth)
     {
-        if (dataY.size() == 0)
-        {
-            return MAGIC_EMPTY_INPUT;
-        }
-        if (dataX.size() / dataY.size() < 1)
+        if (xDim < 1 || yDim < 1)
         {
             return MAGIC_INVALID_INPUT;
+        }
+        if (dataX.size() / xDim != dataY.size() / yDim)
+        {
+            return MAGIC_INVALID_INPUT;
+        }
+        if (dataY.size() / yDim == 0)
+        {
+            return MAGIC_EMPTY_INPUT;
         }
         Reset();
         int featureDim = dataX.size() / dataY.size();
         std::vector<bool> validFeatureFlag(featureDim);
-        mpRootNode = ConstructTree(dataX, dataY, validFeatureFlag, depth);
+        mpRootNode = ConstructTree(dataX, xDim, dataY, yDim, validFeatureFlag, depth);
         if (mpRootNode != NULL)
         {
             return MAGIC_NO_ERROR;
@@ -122,7 +126,7 @@ namespace MagicML
         }
     }
      
-    double RandomTree::Predict(const std::vector<bool>& dataX) const
+    std::vector<double> RandomTree::Predict(const std::vector<bool>& dataX) const
     {
         return mpRootNode->Predict(dataX);
     }
@@ -136,40 +140,53 @@ namespace MagicML
         }
     }
 
-    TreeNode* RandomTree::ConstructTree(const std::vector<bool>& dataX, const std::vector<double>& dataY, 
+    TreeNode* RandomTree::ConstructTree(const std::vector<bool>& dataX, int xDim, const std::vector<double>& dataY, int yDim,
             std::vector<bool>& validFeatureFlag, int depthLeft)
     {
+        int dataSize = dataY.size() / yDim;
         if (depthLeft == 0)
         {
-            TreeNode* pNode = new TreeNode;
-            double prediction = 0.0;
-            for (std::vector<double>::const_iterator itr = dataY.begin(); itr != dataY.end(); itr++)
+            std::vector<double> predictions(yDim, 0);
+            for (int dataId = 0; dataId < dataSize; dataId++)
             {
-                prediction += *itr;
+                int baseIndex = dataId * yDim;
+                for (int dimID = 0; dimID < yDim; dimID++)
+                {
+                    predictions.at(dimID) += dataY.at(baseIndex + dimID);
+                }
             }
-            prediction /= dataY.size();
-            pNode->SetPrediction(prediction);
+            for (int dimId = 0; dimId < yDim; dimId++)
+            {
+                predictions.at(dimId) /= dataSize;
+            }
+            TreeNode* pNode = new TreeNode;
+            pNode->SetPredictions(predictions);
             return pNode;
         }
         //dataY.size() must > 0
         //random chose a feature id, and then process it.
         //if no valid feature id, make this node as leaf
-        int dataSize = dataY.size();
-        int featureDim = dataX.size() / dataY.size();
         std::vector<bool> localValidFeatureFlag = validFeatureFlag;
         while (true)
         {
             int validId = RandomChoseValidId(localValidFeatureFlag);
             if (validId == -1)
             {
-                TreeNode* pNode = new TreeNode;
-                double prediction = 0.0;
-                for (std::vector<double>::const_iterator itr = dataY.begin(); itr != dataY.end(); itr++)
+                std::vector<double> predictions(yDim, 0);
+                for (int dataId = 0; dataId < dataSize; dataId++)
                 {
-                    prediction += *itr;
+                    int baseIndex = dataId * yDim;
+                    for (int dimID = 0; dimID < yDim; dimID++)
+                    {
+                        predictions.at(dimID) += dataY.at(baseIndex + dimID);
+                    }
                 }
-                prediction /= dataY.size();
-                pNode->SetPrediction(prediction);
+                for (int dimId = 0; dimId < yDim; dimId++)
+                {
+                    predictions.at(dimId) /= dataSize;
+                }
+                TreeNode* pNode = new TreeNode;
+                pNode->SetPredictions(predictions);
                 return pNode;
             }
             //
@@ -178,7 +195,7 @@ namespace MagicML
             int rightSubCount = 0;
             for (int dataId = 0; dataId < dataSize; dataId++)
             {
-                if (dataX.at(dataId * featureDim + validId))
+                if (dataX.at(dataId * xDim + validId))
                 {
                     subGroupFlag.at(dataId) = 1;
                     rightSubCount++;
@@ -197,37 +214,43 @@ namespace MagicML
             else
             {
                 localValidFeatureFlag.at(validId) = 0;
-                std::vector<bool> leftDataX(leftSubCount * featureDim);
-                std::vector<double> leftDataY(leftSubCount);
-                std::vector<bool> rightDataX(rightSubCount * featureDim);
-                std::vector<double> rightDataY(rightSubCount);
+                std::vector<bool> leftDataX(leftSubCount * xDim);
+                std::vector<double> leftDataY(leftSubCount * yDim);
+                std::vector<bool> rightDataX(rightSubCount * xDim);
+                std::vector<double> rightDataY(rightSubCount * yDim);
                 int leftId = 0;
                 int rightId = 0;
                 for (int dataId = 0; dataId < dataSize; dataId++)
                 {
                     if (subGroupFlag.at(dataId))
                     {
-                        rightDataY.at(rightId) = dataY.at(dataId);
-                        for (int featureId = 0; featureId < featureDim; featureId++)
+                        for (int yId = 0; yId < yDim; yId++)
                         {
-                            rightDataX.at(rightId * featureDim + featureId) = dataX.at(dataId * featureDim + featureId);
+                            rightDataY.at(rightId * yDim + yId) = dataY.at(dataId * yDim + yId);
+                        }
+                        for (int featureId = 0; featureId < xDim; featureId++)
+                        {
+                            rightDataX.at(rightId * xDim + featureId) = dataX.at(dataId * xDim + featureId);
                         }
                         rightId++;
                     }
                     else
                     {
-                        leftDataY.at(leftId) = dataY.at(dataId);
-                        for (int featureId = 0; featureId < featureDim; featureId++)
+                        for (int yId = 0; yId < yDim; yId++)
                         {
-                            leftDataX.at(leftId * featureDim + featureId) = dataX.at(dataId * featureDim + featureId);
+                            leftDataY.at(leftId * yDim + yId) = dataY.at(dataId * yDim + yId);
+                        }
+                        for (int featureId = 0; featureId < xDim; featureId++)
+                        {
+                            leftDataX.at(leftId * xDim + featureId) = dataX.at(dataId * xDim + featureId);
                         }
                         leftId++;
                     }
                 }
                 TreeNode* pNode = new TreeNode;
                 pNode->SetFeatureId(validId);
-                pNode->SetLeftNode(ConstructTree(leftDataX, leftDataY, localValidFeatureFlag, depthLeft - 1));
-                pNode->SetRightNode(ConstructTree(rightDataX, rightDataY, localValidFeatureFlag, depthLeft - 1));
+                pNode->SetLeftNode(ConstructTree(leftDataX, xDim, leftDataY, yDim, localValidFeatureFlag, depthLeft - 1));
+                pNode->SetRightNode(ConstructTree(rightDataX, xDim, rightDataY, yDim, localValidFeatureFlag, depthLeft - 1));
                 return pNode;
             }
         }
@@ -269,7 +292,8 @@ namespace MagicML
     }
 
     RandomFern::RandomFern() :
-        mPreditions(),
+        mPredictionDim(0),
+        mPredictions(),
         mFeatureIds(),
         mFeatureBases()
     {
@@ -279,41 +303,54 @@ namespace MagicML
     {
     }
 
-    int RandomFern::Learn(const std::vector<bool>& dataX, const std::vector<double>& dataY, int fernSize)
+    int RandomFern::Learn(const std::vector<bool>& dataX, int xDim, const std::vector<double>& dataY, int yDim, int fernSize)
     {
-        if (dataY.size() == 0)
-        {
-            return MAGIC_EMPTY_INPUT;
-        }
-        if (dataX.size() / dataY.size() < 1)
+        if (xDim < 1 || yDim < 1)
         {
             return MAGIC_INVALID_INPUT;
         }
+        if (dataX.size() / xDim != dataY.size() / yDim)
+        {
+            return MAGIC_INVALID_INPUT;
+        }
+        if (dataY.size() / yDim == 0)
+        {
+            return MAGIC_EMPTY_INPUT;
+        }
 
         Reset();
+        mPredictionDim = yDim;
         int predSize = pow(2, fernSize);
-        int dataDim = dataX.size() / dataY.size();
-        int dataSize = dataY.size();
-        mFeatureIds = GenerateRandomFeatureIds(dataDim, fernSize);
+        int dataSize = dataY.size() / yDim;
+        mFeatureIds = GenerateRandomFeatureIds(xDim, fernSize);
         mFeatureBases.resize(fernSize);
         mFeatureBases.at(0) = 1;
         for (int fernId = 1; fernId < fernSize; fernId++)
         {
             mFeatureBases.at(fernId) = mFeatureBases.at(fernId - 1) * 2;
         }
-        mPreditions = std::vector<double>(predSize, 0.0);
+        mPredictions = std::vector<double>(predSize * mPredictionDim, 0.0);
         std::vector<int> predDataNum(predSize, 0);
         for (int dataId = 0; dataId < dataSize; dataId++)
         {
-            int predId = PredictionId(dataX, dataDim, dataId);
-            mPreditions.at(predId) += dataY.at(dataId);
+            int predId = PredictionId(dataX, xDim, dataId);
+            int predBase = predId * mPredictionDim;
+            int dataBase = dataId * mPredictionDim;
+            for (int dimId = 0; dimId < mPredictionDim; dimId++)
+            {
+                mPredictions.at(predBase + dimId) += dataY.at(dataBase + dataId);
+            }
             predDataNum.at(predId)++;
         }
         for (int predId = 0; predId < predSize; predId++)
         {
             if (predDataNum.at(predId) != 0)
             {
-                mPreditions.at(predId) /= predDataNum.at(predId);
+                int predBase = predId * mPredictionDim;
+                for (int dimId = 0; dimId < mPredictionDim; dimId++)
+                {
+                    mPredictions.at(predBase + dimId) /= predDataNum.at(predId);
+                }
             }
             else
             {
@@ -324,15 +361,22 @@ namespace MagicML
         return MAGIC_NO_ERROR;
     }
         
-    double RandomFern::Predict(const std::vector<bool>& dataX) const
+    std::vector<double> RandomFern::Predict(const std::vector<bool>& dataX) const
     {
+        std::vector<double> predictions(mPredictionDim);
         int predictionId = PredictionId(dataX);
-        return mPreditions.at(predictionId);
+        int baseIndex = predictionId * mPredictionDim;
+        for (int dimId = 0; dimId < mPredictionDim; dimId++)
+        {
+            predictions.at(dimId) = mPredictions.at(baseIndex + dimId);
+        }
+        return predictions;
     }
 
     void RandomFern::Reset(void)
     {
-        mPreditions.clear();
+        mPredictionDim = 0;
+        mPredictions.clear();
         mFeatureIds.clear();
         mFeatureBases.clear();
     }

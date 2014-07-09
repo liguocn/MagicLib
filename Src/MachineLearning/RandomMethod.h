@@ -9,9 +9,9 @@ namespace MagicML
         TreeNode();
         ~TreeNode();
 
-        double Predict(const std::vector<bool>& dataX) const;
+        std::vector<double> Predict(const std::vector<bool>& dataX) const;
         void SetFeatureId(int featureId);
-        void SetPrediction(double prediction);
+        void SetPredictions(const std::vector<double>& predictions);
         void SetLeftNode(TreeNode* pNode);
         void SetRightNode(TreeNode* pNode);
 
@@ -19,7 +19,7 @@ namespace MagicML
         int mFeatureId;
         TreeNode* mpLeftNode;
         TreeNode* mpRightNode;
-        double mPrediction;
+        std::vector<double> mPredictions;
     };
 
     class RandomTree
@@ -28,12 +28,12 @@ namespace MagicML
         RandomTree();
         ~RandomTree();
 
-        int Learn(const std::vector<bool>& dataX, const std::vector<double>& dataY, int depth);
-        double Predict(const std::vector<bool>& dataX) const;
+        int Learn(const std::vector<bool>& dataX, int xDim, const std::vector<double>& dataY, int yDim, int depth);
+        std::vector<double> Predict(const std::vector<bool>& dataX) const;
     
     private:
         void Reset(void);
-        TreeNode* ConstructTree(const std::vector<bool>& dataX, const std::vector<double>& dataY, 
+        TreeNode* ConstructTree(const std::vector<bool>& dataX, int xDim, const std::vector<double>& dataY, int yDim,
             std::vector<bool>& validFeatureFlag, int depthLeft);
         int RandomChoseValidId(const std::vector<bool>& validFeatureFlag) const; //return -1 if no valid 
 
@@ -48,8 +48,8 @@ namespace MagicML
         RandomFern();
         ~RandomFern();
 
-        int Learn(const std::vector<bool>& dataX, const std::vector<double>& dataY, int fernSize);
-        double Predict(const std::vector<bool>& dataX) const;
+        int Learn(const std::vector<bool>& dataX, int xDim, const std::vector<double>& dataY, int yDim, int fernSize);
+        std::vector<double> Predict(const std::vector<bool>& dataX) const;
 
     private:
         void Reset(void);
@@ -58,7 +58,8 @@ namespace MagicML
         std::vector<int> GenerateRandomFeatureIds(int dataDim, int fernSize) const;
 
     private:
-        std::vector<double> mPreditions;
+        int mPredictionDim;
+        std::vector<double> mPredictions;
         std::vector<int> mFeatureIds;
         //cache
         std::vector<int> mFeatureBases;
