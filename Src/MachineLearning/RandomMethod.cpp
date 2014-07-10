@@ -338,7 +338,7 @@ namespace MagicML
             int dataBase = dataId * mPredictionDim;
             for (int dimId = 0; dimId < mPredictionDim; dimId++)
             {
-                mPredictions.at(predBase + dimId) += dataY.at(dataBase + dataId);
+                mPredictions.at(predBase + dimId) += dataY.at(dataBase + dimId);
             }
             predDataNum.at(predId)++;
         }
@@ -352,10 +352,10 @@ namespace MagicML
                     mPredictions.at(predBase + dimId) /= predDataNum.at(predId);
                 }
             }
-            else
+            /*else
             {
                 DebugLog << "Empty fern block: " << predId << std::endl;
-            }
+            }*/
         }
 
         return MAGIC_NO_ERROR;
@@ -371,6 +371,28 @@ namespace MagicML
             predictions.at(dimId) = mPredictions.at(baseIndex + dimId);
         }
         return predictions;
+    }
+
+    std::vector<double> RandomFern::PredictWithValidFeature(const std::vector<bool>& dataX) const
+    {
+        int fernSize = dataX.size();
+        int predictionId = 0;
+        for (int fernId = 0; fernId < fernSize; fernId++)
+        {
+            predictionId += dataX.at(fernId) * mFeatureBases.at(fernId);
+        }
+        std::vector<double> predictions(mPredictionDim);
+        int baseIndex = predictionId * mPredictionDim;
+        for (int dimId = 0; dimId < mPredictionDim; dimId++)
+        {
+            predictions.at(dimId) = mPredictions.at(baseIndex + dimId);
+        }
+        return predictions;
+    }
+
+    const std::vector<int>& RandomFern::GetFeatureIds(void) const
+    {
+        return mFeatureIds;
     }
 
     void RandomFern::Reset(void)

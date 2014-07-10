@@ -309,6 +309,11 @@ namespace MagicApp
             delete mpImage;
             mpImage = NULL;
         }
+        if (mpFfp != NULL)
+        {
+            delete mpFfp;
+            mpFfp = NULL;
+        }
     }
 
     bool Face2DObj::LoadFaceImage(const std::string& fileName)

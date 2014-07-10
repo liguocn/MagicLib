@@ -50,6 +50,8 @@ namespace MagicML
 
         int Learn(const std::vector<bool>& dataX, int xDim, const std::vector<double>& dataY, int yDim, int fernSize);
         std::vector<double> Predict(const std::vector<bool>& dataX) const;
+        std::vector<double> PredictWithValidFeature(const std::vector<bool>& dataX) const;
+        const std::vector<int>& GetFeatureIds(void) const;
 
     private:
         void Reset(void);
