@@ -36,12 +36,14 @@ namespace MagicApp
         std::ifstream fin(landFile);
         int dataSize;
         fin >> dataSize;
+        //dataSize = 100;
         std::vector<std::string> imgFiles(dataSize);
         std::vector<double> targetTheta;
         targetTheta.reserve(dataSize * 2);
         int imgH;
         double avgThetaX = 0;
         double avgThetaY = 0;
+        //std::string testImgName = "D:\\fun\\magic3d\\data\\face\\FaceWarehouse\\Tester_133\\TrainingPose\\pose_10.jpg";
         for (int dataId = 0; dataId < dataSize; dataId++)
         {
             std::string featureName;
@@ -51,6 +53,7 @@ namespace MagicApp
             std::string::size_type pos = imgName.rfind(".");
             imgName.replace(pos, 5, ".jpg");
             imgFiles.at(dataId) = imgName;
+            //imgFiles.at(dataId) = testImgName;
             if (dataId == 0)
             {
                 cv::Mat img = cv::imread(imgName);
@@ -69,6 +72,7 @@ namespace MagicApp
             thetaY = imgH - thetaY;
             targetTheta.push_back(thetaY);
             targetTheta.push_back(thetaX);
+            //DebugLog << "pos: " << thetaX << " " << thetaY << std::endl;
             avgThetaX += thetaX;
             avgThetaY += thetaY;
             landFin.close();
@@ -76,6 +80,7 @@ namespace MagicApp
         fin.close();
         avgThetaX /= dataSize;
         avgThetaY /= dataSize;
+        //DebugLog << "avg: " << avgThetaX << " " << avgThetaY << std::endl;
         std::vector<double> initialTheta;
         initialTheta.reserve(dataSize * 2);
         for (int dataId = 0; dataId < dataSize; dataId++)

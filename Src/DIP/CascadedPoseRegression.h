@@ -23,6 +23,7 @@ namespace MagicDIP
     protected:
         virtual void FeaturePatternGeneration(const std::vector<std::string>& imgFiles, const std::vector<double>& theta, 
             const std::vector<double>& dataY, int dataCount, int featureSize, std::vector<bool>& features) = 0;
+        virtual void UpdateValidFeaturePosPair(const std::vector<int>& validFeatureIds) = 0;
         virtual void ValidFeatureGeneration(const cv::Mat& img, const std::vector<double>& theta, int fernId, std::vector<bool>& features) const = 0;
         virtual void Reset(void);
 
@@ -40,6 +41,7 @@ namespace MagicDIP
     protected:
         virtual void FeaturePatternGeneration(const std::vector<std::string>& imgFiles, const std::vector<double>& theta, 
             const std::vector<double>& dataY, int dataCount, int featureSize, std::vector<bool>& features);
+        virtual void UpdateValidFeaturePosPair(const std::vector<int>& validFeatureIds);
         virtual void ValidFeatureGeneration(const cv::Mat& img, const std::vector<double>& theta, int fernId, std::vector<bool>& features) const;
         virtual void Reset(void);
 
@@ -47,8 +49,10 @@ namespace MagicDIP
         void ScaleToPatchCoord(int pos, int& imgRow, int& imgCol) const;
 
     private:
-        int mFeatureSize;
+        int mValidFeatureSize;
         int mImgPatchSize; //odd number
+        std::vector<int> mValidFeaturePosPairs;
+        //cache
         std::vector<int> mFeaturePosPairs;
     };
 
