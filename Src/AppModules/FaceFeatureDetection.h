@@ -19,6 +19,8 @@ namespace MagicApp
 
         int LearnRegression(const std::string& landFile);
         int PoseRegression(const cv::Mat& img, const std::vector<double>& initPos, std::vector<double>& finalPos) const;
+        void Save(const std::string& fileName) const;
+        void Load(const std::string& fileName);
 
     private:
         MagicDIP::CascadedPoseRegression* mpRegression;

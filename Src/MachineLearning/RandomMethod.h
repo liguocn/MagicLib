@@ -52,6 +52,8 @@ namespace MagicML
         std::vector<double> Predict(const std::vector<bool>& dataX) const;
         std::vector<double> PredictWithValidFeature(const std::vector<bool>& dataX) const;
         const std::vector<int>& GetFeatureIds(void) const;
+        void Save(int& predictionDim, std::vector<double>& predictions, std::vector<int>& featureIds, std::vector<int>& featureBases) const;
+        void Load(int predictionDim, const std::vector<double> predictions, const std::vector<int>& featureIds, const std::vector<int>& featureBases);
 
     private:
         void Reset(void);

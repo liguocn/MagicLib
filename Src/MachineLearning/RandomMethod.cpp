@@ -395,6 +395,25 @@ namespace MagicML
         return mFeatureIds;
     }
 
+    void RandomFern::Save(int& predictionDim, std::vector<double>& predictions, std::vector<int>& featureIds, 
+        std::vector<int>& featureBases) const
+    {
+        predictionDim = mPredictionDim;
+        predictions = mPredictions;
+        featureIds = mFeatureIds;
+        featureBases = mFeatureBases;
+    }
+        
+    void RandomFern::Load(int predictionDim, const std::vector<double> predictions, const std::vector<int>& featureIds, 
+        const std::vector<int>& featureBases)
+    {
+        Reset();
+        mPredictionDim = predictionDim;
+        mPredictions = predictions;
+        mFeatureIds = featureIds;
+        mFeatureBases = featureBases;
+    }
+
     void RandomFern::Reset(void)
     {
         mPredictionDim = 0;

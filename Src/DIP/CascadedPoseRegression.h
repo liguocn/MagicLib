@@ -19,6 +19,8 @@ namespace MagicDIP
         int LearnRegression(const std::vector<std::string>& imgFiles, const std::vector<double>& initTheta, 
             const std::vector<double>& finalTheta, int thetaDim, int fernCount, int fernSize, int featureSize);
         int PoseRegression(const cv::Mat& img, const std::vector<double>& initTheta, std::vector<double>&finalTheta) const;
+        virtual void Save(const std::string& fileName) const = 0;
+        virtual void Load(const std::string& fileName) = 0;
 
     protected:
         virtual void FeaturePatternGeneration(const std::vector<std::string>& imgFiles, const std::vector<double>& theta, 
@@ -27,8 +29,10 @@ namespace MagicDIP
         virtual void ValidFeatureGeneration(const cv::Mat& img, const std::vector<double>& theta, int fernId, std::vector<bool>& features) const = 0;
         virtual void Reset(void);
 
-    private:
+    protected:
         std::vector<MagicML::RandomFern* > mRandomFerns;
+        //cache
+        //std::vector<cv::Mat* > mImageList;
     };
 
     class SimpleCascadedPoseRegression : public CascadedPoseRegression
@@ -37,6 +41,9 @@ namespace MagicDIP
         SimpleCascadedPoseRegression();
         SimpleCascadedPoseRegression(int patchSize);
         virtual ~SimpleCascadedPoseRegression();
+
+        virtual void Save(const std::string& fileName) const;
+        virtual void Load(const std::string& fileName);
 
     protected:
         virtual void FeaturePatternGeneration(const std::vector<std::string>& imgFiles, const std::vector<double>& theta, 
@@ -52,7 +59,7 @@ namespace MagicDIP
         int mValidFeatureSize;
         int mImgPatchSize; //odd number
         std::vector<int> mValidFeaturePosPairs;
-        //cache
+        //temporary cache
         std::vector<int> mFeaturePosPairs;
     };
 
