@@ -7,6 +7,7 @@
 namespace MagicDIP
 {
     class CascadedPoseRegression;
+    class ExplicitShapeRegression;
 }
 
 namespace MagicApp
@@ -24,6 +25,25 @@ namespace MagicApp
 
     private:
         MagicDIP::CascadedPoseRegression* mpRegression;
+    };
+
+    class ShapeFaceFeatureDetection : public MagicObject
+    {
+    public:
+        ShapeFaceFeatureDetection();
+        ~ShapeFaceFeatureDetection();
+
+        int LearnRegression(const std::string& landFile);
+        int ShapeRegression(const cv::Mat& img, const std::vector<double>& initPos, std::vector<double>& finalPos) const;
+        void Save(const std::string& fileName) const;
+        void Load(const std::string& fileName);
+        std::vector<double> GetMeanFace(void) const;
+        int CalMeanFace(const std::string& landFile);
+        bool IsMeanFaceExist(void) const;
+
+    private:
+        MagicDIP::ExplicitShapeRegression* mpRegression;
+        std::vector<double> mMeanFace; //center at (0, 0)
     };
 
 }

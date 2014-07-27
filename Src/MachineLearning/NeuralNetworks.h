@@ -3,15 +3,6 @@
 
 namespace MagicML
 {
-    class LinkFunction
-    {
-    public:
-        LinkFunction();
-        virtual ~LinkFunction() = 0;
-        virtual double GetValue(double x, int order) = 0;
-    };
-
-    
     //Two layers
     class NeuralNetworks
     {
@@ -19,15 +10,15 @@ namespace MagicML
         NeuralNetworks();
         ~NeuralNetworks();
 
-        void Learn(const std::vector<double>& dataX, const std::vector<double>& dataY, LinkFunction* linkFunc, int linkCount);
+        int Learn(const std::vector<double>& dataX, const std::vector<double>& dataY, int hiddenCount);
         double Predict(const std::vector<double>& dataX) const;
 
     private:
         void Reset(void);
+        void InitializeW(void);
 
     private:
-        LinkFunction* mpLinkFunc;
-        int mLinkCount;
+        int mHiddenCount;
         int mDataDim;
         std::vector<double> mFirstLayerW;
         std::vector<double> mSecondLayerW;

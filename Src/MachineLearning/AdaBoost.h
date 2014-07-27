@@ -3,31 +3,38 @@
 
 namespace MagicML
 {
-    class SimpleClassifier
+    class WeakClassifier
     {
     public:
-        SimpleClassifier();
-        virtual ~SimpleClassifier() = 0;
+        WeakClassifier();
+        virtual ~WeakClassifier() = 0;
 
-        virtual void Learn(const std::vector<double>& dataX, const std::vector<double>& dataY) = 0;
-        virtual double Predict(const std::vector<double>& dataX) const = 0;
+        virtual int Learn(const std::vector<double>& dataX, const std::vector<double>& dataWeights, const std::vector<int>& dataY,
+            double* trainError) = 0;
+        virtual int Predict(const std::vector<double>& dataX) const = 0;
+        virtual int Predict(const std::vector<double>& dataX, int dataId) const = 0;
     };
 
     class AdaBoost
     {
     public:
         AdaBoost();
-        ~AdaBoost();
+        virtual ~AdaBoost();
 
-        void Learn(const std::vector<double>& dataX, const std::vector<double>& dataY, const std::vector<SimpleClassifier*>& classifierList);
-        double Predict(const std::vector<double>& dataX) const;
+        int Learn(const std::vector<double>& dataX, const std::vector<int>& dataY, int levelCount);
+        int Predict(const std::vector<double>& dataX) const;
+        double GetThreshold(void) const;
+        void SetThreshold(double thred);
 
-    private:
+    protected:
         void Reset(void);
+        virtual WeakClassifier* TrainWeakClassifier(const std::vector<double>& dataX, const std::vector<int>& dataY, 
+            const std::vector<double>& dataWeights) const = 0;
 
-    private:
-        std::vector<SimpleClassifier*> mClassifiers;
-        std::vector<double> mWeights;
+    protected:
+        std::vector<WeakClassifier*> mClassifiers;
+        std::vector<double> mClassifierWeights;
+        double mThreshold;
     };
 
 }

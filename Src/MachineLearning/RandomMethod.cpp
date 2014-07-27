@@ -271,7 +271,7 @@ namespace MagicML
         {
             return -1;
         }
-        srand(time(NULL));
+        //srand(time(NULL));
         int randomId = rand() % validCount;
         for (std::vector<bool>::const_iterator itr = validFeatureFlag.begin(); itr != validFeatureFlag.end(); itr++)
         {
@@ -447,7 +447,7 @@ namespace MagicML
 
     std::vector<int> RandomFern::GenerateRandomFeatureIds(int dataDim, int fernSize) const
     {
-        srand(time(NULL));
+        //srand(time(NULL));
         std::set<int> randomSet;
         for (int fernId = 0; fernId < fernSize; fernId++)
         {
