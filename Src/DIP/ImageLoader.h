@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <string>
+#include "opencv2/opencv.hpp"
 
 namespace MagicDIP
 {
@@ -26,6 +27,8 @@ namespace MagicDIP
         void ClearIntegralImageData(void);
         void Reset(void);
         int GetImageCount(void) const;
+
+        static void TransferToIntegralImg(const cv::Mat& img, std::vector<unsigned int>& integralImg);
 
     private:
         int mImageCount;

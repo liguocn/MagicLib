@@ -20,12 +20,12 @@ namespace MagicDIP
 
     int ImageLoader::LoadImages(const std::vector<std::string>& imgFiles, ImageType it)
     {
-        mImageCount = imgFiles.size();
-        if (mImageCount == 0)
+        if (imgFiles.size() == 0)
         {
             return MAGIC_EMPTY_INPUT;
         }
         Reset();
+        mImageCount = imgFiles.size();
         if (it == IT_Gray)
         {
             mImages.reserve(mImageCount);
@@ -60,7 +60,55 @@ namespace MagicDIP
 
     void ImageLoader::GenerateIntegralImage(void)
     {
-
+        ClearIntegralImageData();
+        mIntegralImage.reserve(mImageCount);
+        unsigned int* colCumValues = NULL;
+        int lastH = 0;
+        int lastW = 0;
+        for (int imgId = 0; imgId < mImageCount; imgId++)
+        {
+            unsigned char* pImage = mImages.at(imgId);
+            int imgH = mImageSize.at(imgId * 2);
+            int imgW = mImageSize.at(imgId * 2 + 1);
+            if (lastH != imgH || lastW != imgW)
+            {
+                if (colCumValues != NULL)
+                {
+                    delete []colCumValues;
+                    colCumValues = NULL;
+                }
+                colCumValues = new unsigned int[imgH * imgW];
+            }
+            for (int wid = 0; wid < imgW; wid++)
+            {
+                colCumValues[wid] = pImage[wid];
+            }
+            for (int hid = 1; hid < imgH; hid++)
+            {
+                int baseIndex = hid * imgW;
+                int lastBaseIndex = baseIndex - imgW;
+                for (int wid = 0; wid < imgW; wid++)
+                {
+                    colCumValues[baseIndex + wid] = colCumValues[lastBaseIndex + wid] + pImage[baseIndex + wid];
+                }
+            }
+            unsigned int* pIntegralValues = new unsigned int[imgH * imgW];
+            for (int hid = 0; hid < imgH; hid++)
+            {
+                pIntegralValues[hid * imgW] = colCumValues[hid * imgW];
+            }
+            for (int wid = 1; wid < imgW; wid++)
+            {
+                for (int hid = 0; hid < imgH; hid++)
+                {
+                    int baseIndex = hid * imgW + wid;
+                    pIntegralValues[baseIndex] = pIntegralValues[baseIndex - 1] + colCumValues[baseIndex];
+                }
+            }
+            mIntegralImage.push_back(pIntegralValues);
+            lastH = imgH;
+            lastW = imgW;
+        }
     }
 
     const unsigned char* ImageLoader::GetImage(int imgId) const
@@ -120,5 +168,39 @@ namespace MagicDIP
     int ImageLoader::GetImageCount(void) const
     {
         return mImageCount;
+    }
+
+    void ImageLoader::TransferToIntegralImg(const cv::Mat& img, std::vector<unsigned int>& integralImg)
+    {
+        int imgH = img.rows;
+        int imgW = img.cols;
+        std::vector<unsigned int> colCumValues(imgH * imgW);
+        for (int wid = 0; wid < imgW; wid++)
+        {
+            colCumValues.at(wid) = img.ptr(0, wid)[0];
+        }
+        for (int hid = 1; hid < imgH; hid++)
+        {
+            int baseIndex = hid * imgW;
+            int lastBaseIndex = baseIndex - imgW;
+            for (int wid = 0; wid < imgW; wid++)
+            {
+                colCumValues.at(baseIndex + wid) = colCumValues.at(lastBaseIndex + wid) + img.ptr(hid, wid)[0];
+            }
+        }
+        integralImg.clear();
+        integralImg = std::vector<unsigned int>(imgW * imgH);
+        for (int hid = 0; hid < imgH; hid++)
+        {
+            integralImg.at(hid * imgW) = colCumValues.at(hid * imgW);
+        }
+        for (int wid = 1; wid < imgW; wid++)
+        {
+            for (int hid = 0; hid < imgH; hid++)
+            {
+                int baseIndex = hid * imgW + wid;
+                integralImg.at(baseIndex) = integralImg.at(baseIndex - 1) + colCumValues.at(baseIndex);
+            }
+        }
     }
 }

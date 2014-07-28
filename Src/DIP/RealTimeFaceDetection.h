@@ -20,20 +20,25 @@ namespace MagicDIP
     {
     public:
         HaarClassifier();
+        HaarClassifier(const HaarFeature& feature);
         ~HaarClassifier();
 
+        void SetFeature(const HaarFeature& feature);
         int Learn(const ImageLoader& faceImgLoader, const std::vector<double>& faceDataWeights, const ImageLoader& nonFaceImgLoader,
             const std::vector<double>& nonFaceDataWeights, const std::vector<int>& nonFaceIndex, double* trainError);
-        int Predict(const cv::Mat& img, int sRow, int sCol, float scale) const;
+        int Predict(const std::vector<unsigned int>& integralImg, int sRow, int sCol, float scale) const;
         int Predict(const ImageLoader& imgLoader, int dataId) const;
         void Save(std::ofstream& fout) const;
         void Load(std::ifstream& fin);
 
     private:
+        int CalFeatureValue(const ImageLoader& imgLoader, int dataId) const;
+        int ImgBoxValue(const ImageLoader& imgLoader, int dataId, int sRow, int sCol, int eRow, int eCol) const;
+
+    private:
         HaarFeature mFeature;
         int mThreshold;
         bool mIsLess;
-        //cache
     };
 
     class AdaBoostFaceDetection
@@ -44,21 +49,24 @@ namespace MagicDIP
 
         int Learn(const ImageLoader& faceImgLoader, const ImageLoader& nonFaceImgLoader, const std::vector<bool>& nonFaceValidFlag,
             int levelCount);
-        int Predict(const cv::Mat& img, int sRow, int sCol, double scale) const;
+        int Predict(const std::vector<unsigned int>& integralImg, int sRow, int sCol, double scale) const;
         int Predict(const ImageLoader& imgLoader, int dataId) const;
         void Save(std::ofstream& fout) const;
         void Load(std::ifstream& fin);
 
     private:
-        HaarClassifier* TrainWeakClassifier(const ImageLoader& faceImgLoader, const std::vector<double>& faceDataWeights, 
+        void GenerateClassifierCadidates(int baseImgSize);
+        int TrainWeakClassifier(const ImageLoader& faceImgLoader, const std::vector<double>& faceDataWeights, 
             const ImageLoader& nonFaceImgLoader, const std::vector<double>& nonFaceDataWeights, 
-            const std::vector<int>& nonFaceIndex) const;
+            const std::vector<int>& nonFaceIndex);
         void Reset(void);
 
     private:
         std::vector<HaarClassifier*> mClassifiers;
         std::vector<double> mClassifierWeights;
         double mThreshold;
+        //Cache classifier candidates
+        std::vector<HaarClassifier*> mClassifierCandidates;
     };
 
     class RealTimeFaceDetection
@@ -74,7 +82,7 @@ namespace MagicDIP
         void Load(const std::string& fileName);
 
     private:
-        int DetectOneFace(const cv::Mat& img, int sRow, int sCol, double scale) const;
+        int DetectOneFace(const std::vector<unsigned int>& integralImg, int sRow, int sCol, double scale) const;
         void Reset(void);
 
     private:

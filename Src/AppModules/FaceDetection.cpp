@@ -160,11 +160,14 @@ namespace MagicApp
         fin >> dataSize;
         imgNames.clear();
         imgNames.resize(dataSize);
+        const int maxSize = 512;
+        char pLine[maxSize];
+        fin.getline(pLine, maxSize);
         for (int dataId = 0; dataId < dataSize; dataId++)
         {
-            std::string imgName;
-            fin >> imgName;
-            imgNames.at(dataId) = imgName;
+            fin.getline(pLine, maxSize);
+            std::string imgName(pLine);
+            imgNames.at(dataId) = imgPath + imgName;
         }
         fin.close();
         return MAGIC_NO_ERROR;

@@ -5,12 +5,28 @@
 namespace MagicDIP
 {
 
-    HaarClassifier::HaarClassifier()
+    HaarClassifier::HaarClassifier() :
+        mFeature(),
+        mThreshold(0),
+        mIsLess(true)
     {
+    }
+
+    HaarClassifier::HaarClassifier(const HaarFeature& feature) :
+        mFeature(feature),
+        mThreshold(0),
+        mIsLess(true)
+    {
+
     }
 
     HaarClassifier::~HaarClassifier()
     {
+    }
+
+    void HaarClassifier::SetFeature(const HaarFeature& feature)
+    {
+        mFeature = feature;
     }
 
     int HaarClassifier::Learn(const ImageLoader& faceImgLoader, const std::vector<double>& faceDataWeights, 
@@ -20,12 +36,50 @@ namespace MagicDIP
         return MAGIC_NO_ERROR;
     }
      
-    int HaarClassifier::Predict(const cv::Mat& img, int sRow, int sCol, float scale) const
+    int HaarClassifier::Predict(const std::vector<unsigned int>& integralImg, int sRow, int sCol, float scale) const
     {
         return 0;
     }
 
     int HaarClassifier::Predict(const ImageLoader& imgLoader, int dataId) const
+    {
+        return 0;
+    }
+
+    int HaarClassifier::CalFeatureValue(const ImageLoader& imgLoader, int dataId) const
+    {
+        if (mFeature.type == 0)
+        {
+            int posValue = ImgBoxValue(imgLoader, dataId, mFeature.sRow, mFeature.sCol, 
+                mFeature.sRow + mFeature.lRow - 1, mFeature.sCol + mFeature.lCol / 2 - 1);
+            int negValue = ImgBoxValue(imgLoader, dataId, mFeature.sRow, mFeature.sCol + mFeature.lCol / 2 - 1,
+                mFeature.sRow + mFeature.lRow - 1, mFeature.sCol + mFeature.lCol - 1);
+            return posValue - negValue;
+        }
+        else if (mFeature.type == 1)
+        {
+            int negValue = ImgBoxValue(imgLoader, dataId, mFeature.sRow, mFeature.sCol, 
+                mFeature.sRow + mFeature.lRow / 2 - 1, mFeature.sCol + mFeature.lCol - 1);
+            int posValue = ImgBoxValue(imgLoader, dataId, mFeature.sRow + mFeature.lRow / 2 - 1, mFeature.sCol,
+                mFeature.sRow + mFeature.lRow - 1, mFeature.sCol + mFeature.lCol - 1);
+            return posValue - negValue;
+        }
+        else if (mFeature.type == 2)
+        {
+            return 0;
+        }
+        else if (mFeature.type == 3)
+        {
+            return 0;
+        }
+        else
+        {
+            DebugLog << "Error: wrong type: " << mFeature.type << std::endl;
+            return 0;
+        }
+    }
+
+    int HaarClassifier::ImgBoxValue(const ImageLoader& imgLoader, int dataId, int sRow, int sCol, int eRow, int eCol) const
     {
         return 0;
     }
@@ -41,12 +95,17 @@ namespace MagicDIP
         fin >> mFeature.sRow >> mFeature.sCol >> mFeature.lRow >> mFeature.lCol >> mFeature.type >> mThreshold >> mIsLess;
     }
 
-    AdaBoostFaceDetection::AdaBoostFaceDetection()
+    AdaBoostFaceDetection::AdaBoostFaceDetection() :
+        mClassifiers(),
+        mClassifierWeights(),
+        mThreshold(0),
+        mClassifierCandidates()
     {
     }
 
     AdaBoostFaceDetection::~AdaBoostFaceDetection()
     {
+        Reset();
     }
 
     int AdaBoostFaceDetection::Learn(const ImageLoader& faceImgLoader, const ImageLoader& nonFaceImgLoader,
@@ -75,25 +134,29 @@ namespace MagicDIP
         }
         std::vector<double> nonFaceWeights(nonFaceCount, 0.5 / nonFaceCount);
 
+        GenerateClassifierCadidates(faceImgLoader.GetImageWidth(0));
+        return MAGIC_NO_ERROR;
         std::vector<int> faceResFlag(faceCount);
         std::vector<int> nonFaceResFlag(nonFaceCount);
         double epsilon = 1.0e-5;
         mThreshold = 0.0;
         for (int levelId = 0; levelId < levelCount; levelId++)
         {
-            HaarClassifier* pWeakClassifier = TrainWeakClassifier(faceImgLoader, faceWeights, nonFaceImgLoader, nonFaceWeights,
+            int weakClassifierId = TrainWeakClassifier(faceImgLoader, faceWeights, nonFaceImgLoader, nonFaceWeights,
                 nonFaceIndex);
-            if (pWeakClassifier != NULL)
+            HaarClassifier* pWeakClassifier = NULL;
+            if (weakClassifierId != -1)
             {
+                pWeakClassifier = mClassifierCandidates.at(weakClassifierId);
                 mClassifiers.push_back(pWeakClassifier);
+                mClassifierCandidates.at(weakClassifierId) = NULL;
             }
             else
             {
                 Reset();
                 DebugLog << "Error: NULL Weak Classifier" << std::endl;
                 return MAGIC_INVALID_RESULT;
-            }
-
+            } 
             double trainingError = 0.0;
             for (int faceId = 0; faceId < faceCount; faceId++)
             {
@@ -152,13 +215,13 @@ namespace MagicDIP
         return MAGIC_NO_ERROR;
     }
     
-    int AdaBoostFaceDetection::Predict(const cv::Mat& img, int sRow, int sCol, double scale) const
+    int AdaBoostFaceDetection::Predict(const std::vector<unsigned int>& integralImg, int sRow, int sCol, double scale) const
     {
         double res = 0.0;
         int classifierCount = mClassifierWeights.size();
         for (int cid = 0; cid < classifierCount; cid++)
         {
-            res += mClassifiers.at(cid)->Predict(img, sRow, sCol, scale) * mClassifierWeights.at(cid);
+            res += mClassifiers.at(cid)->Predict(integralImg, sRow, sCol, scale) * mClassifierWeights.at(cid);
         }
         if (res > mThreshold)
         {
@@ -223,11 +286,81 @@ namespace MagicDIP
         }
     }
 
-    HaarClassifier* AdaBoostFaceDetection::TrainWeakClassifier(const ImageLoader& faceImgLoader, 
-        const std::vector<double>& faceDataWeights, const ImageLoader& nonFaceImgLoader, 
-        const std::vector<double>& nonFaceDataWeights, const std::vector<int>& nonFaceIndex) const
+    void AdaBoostFaceDetection::GenerateClassifierCadidates(int baseImgSize)
     {
-        return NULL;
+        for (int sRow = 0; sRow < baseImgSize; sRow++)
+        {
+            for (int sCol = 0; sCol < baseImgSize; sCol++)
+            {
+                int colMaxLen = baseImgSize - sCol;
+                int rowMaxLen = baseImgSize - sRow;
+                for (int lRow = 1; lRow <= rowMaxLen; lRow++)
+                {
+                    for (int lCol = 2; lCol <= colMaxLen; lCol += 2)
+                    {
+                        HaarFeature feature = {sRow, sCol, lRow, lCol, 0};
+                        HaarClassifier* pClassifier = new HaarClassifier(feature);
+                        mClassifierCandidates.push_back(pClassifier);
+                    }
+                }
+                for (int lRow = 2; lRow <= rowMaxLen; lRow += 2)
+                {
+                    for (int lCol = 1; lCol <= colMaxLen; lCol++)
+                    {
+                        HaarFeature feature = {sRow, sCol, lRow, lCol, 1};
+                        HaarClassifier* pClassifier = new HaarClassifier(feature);
+                        mClassifierCandidates.push_back(pClassifier);
+                    }
+                }
+                for (int lRow = 1; lRow <= rowMaxLen; lRow++)
+                {
+                    for (int lCol = 2; lCol <= colMaxLen; lCol += 3)
+                    {
+                        HaarFeature feature = {sRow, sCol, lRow, lCol, 2};
+                        HaarClassifier* pClassifier = new HaarClassifier(feature);
+                        mClassifierCandidates.push_back(pClassifier);
+                    }
+                }
+                for (int lRow = 1; lRow <= rowMaxLen; lRow += 2)
+                {
+                    for (int lCol = 2; lCol <= colMaxLen; lCol += 2)
+                    {
+                        HaarFeature feature = {sRow, sCol, lRow, lCol, 3};
+                        HaarClassifier* pClassifier = new HaarClassifier(feature);
+                        mClassifierCandidates.push_back(pClassifier);
+                    }
+                }
+            }
+        }
+        DebugLog << "GenerateClassifierCadidates: " << mClassifierCandidates.size() << std::endl;
+    }
+
+    int AdaBoostFaceDetection::TrainWeakClassifier(const ImageLoader& faceImgLoader, 
+        const std::vector<double>& faceDataWeights, const ImageLoader& nonFaceImgLoader, 
+        const std::vector<double>& nonFaceDataWeights, const std::vector<int>& nonFaceIndex)
+    {
+        double minTrainError = 1.0e308;
+        int classifierId = -1;
+        for (int cid = 0; cid < mClassifierCandidates.size(); cid++)
+        {
+            HaarClassifier* pClassifier = mClassifierCandidates.at(cid);
+            if (pClassifier != NULL)
+            {
+                double trainError;
+                int res = pClassifier->Learn(faceImgLoader, faceDataWeights, nonFaceImgLoader, nonFaceDataWeights, nonFaceIndex, &trainError);
+                if (res != MAGIC_NO_ERROR)
+                {
+                    DebugLog << "HaarClassifier training failed" << std::endl;
+                    return -1;
+                }
+                if (trainError < minTrainError)
+                {
+                    minTrainError = trainError;
+                    classifierId = cid;
+                }
+            }
+        }
+        return classifierId;
     }
 
     void AdaBoostFaceDetection::Reset(void)
@@ -243,6 +376,15 @@ namespace MagicDIP
         }
         mClassifiers.clear();
         mClassifierWeights.clear();
+        for (std::vector<HaarClassifier*>::iterator itr = mClassifierCandidates.begin(); itr != mClassifierCandidates.end(); itr++)
+        {
+            if ((*itr) != NULL)
+            {
+                delete (*itr);
+                (*itr) = NULL;
+            }
+        }
+        mClassifierCandidates.clear();
     }
 
     RealTimeFaceDetection::RealTimeFaceDetection() : 
@@ -275,9 +417,13 @@ namespace MagicDIP
         mCascadedDetectors.reserve(stageCount);
         ImageLoader faceImgLoader;
         faceImgLoader.LoadImages(faceImages, ImageLoader::IT_Gray);
+        faceImgLoader.GenerateIntegralImage();
+        faceImgLoader.ClearImageData();
         mBaseImgSize = faceImgLoader.GetImageWidth(0);
         ImageLoader nonFaceImgLoader;
         nonFaceImgLoader.LoadImages(nonFaceImages, ImageLoader::IT_Gray);
+        nonFaceImgLoader.GenerateIntegralImage();
+        nonFaceImgLoader.ClearImageData();
         std::vector<bool> nonFaceValidFlag(nonFaceImages.size(), 1);
         DebugLog << "Learn Cascaded detectors..." << std::endl;
         for (int stageId = 0; stageId < stageCount; stageId++)
@@ -315,6 +461,8 @@ namespace MagicDIP
         int curSubImgSize = curScale * mBaseImgSize;
         int imgH = img.rows;
         int imgW = img.cols;
+        std::vector<unsigned int> integralImg;
+        ImageLoader::TransferToIntegralImg(img, integralImg);
         while (curSubImgSize < imgH && curSubImgSize < imgW)
         {
             int maxRow = imgH - curSubImgSize;
@@ -323,7 +471,7 @@ namespace MagicDIP
             {
                 for (int cid = 0; cid < maxCol; cid += curStep)
                 {
-                    if (DetectOneFace(img, rid, cid, curScale))
+                    if (DetectOneFace(integralImg, rid, cid, curScale))
                     {
                         faces.push_back(rid);
                         faces.push_back(cid);
@@ -367,7 +515,7 @@ namespace MagicDIP
         fin.close();
     }
 
-    int RealTimeFaceDetection::DetectOneFace(const cv::Mat& img, int sRow, int sCol, double scale) const
+    int RealTimeFaceDetection::DetectOneFace(const std::vector<unsigned int>& integralImg, int sRow, int sCol, double scale) const
     {
         if (mCascadedDetectors.size() == 0)
         {
@@ -375,7 +523,7 @@ namespace MagicDIP
         }
         for (std::vector<AdaBoostFaceDetection*>::const_iterator itr = mCascadedDetectors.begin(); itr != mCascadedDetectors.end(); itr++)
         {
-            if ( (*itr)->Predict(img, sRow, sCol, scale) == 0 )
+            if ( (*itr)->Predict(integralImg, sRow, sCol, scale) == 0 )
             {
                 return 0;
             }
