@@ -20,13 +20,15 @@ namespace MagicDIP
         int LoadImages(const std::vector<std::string>& imgFiles, ImageType it);
         void GenerateIntegralImage(void);
         const unsigned char* GetImage(int imgId) const;
+        int GetImageCount(void) const;
         int GetImageWidth(int imgId) const;
         int GetImageHeight(int imgId) const;
         unsigned char GetGrayImageValue(int imgId, int hid, int wid) const;
+        int GetIntegralValue(int imgId, int hid, int wid) const;
         void ClearImageData(void);
         void ClearIntegralImageData(void);
         void Reset(void);
-        int GetImageCount(void) const;
+        
 
         static void TransferToIntegralImg(const cv::Mat& img, std::vector<unsigned int>& integralImg);
 

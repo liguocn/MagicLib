@@ -109,6 +109,11 @@ namespace MagicDIP
             lastH = imgH;
             lastW = imgW;
         }
+        if (colCumValues != NULL)
+        {
+            delete []colCumValues;
+            colCumValues = NULL;
+        }
     }
 
     const unsigned char* ImageLoader::GetImage(int imgId) const
@@ -129,6 +134,11 @@ namespace MagicDIP
     unsigned char ImageLoader::GetGrayImageValue(int imgId, int hid, int wid) const
     {
         return mImages.at(imgId)[hid * mImageSize.at(imgId * 2 + 1) + wid];
+    }
+
+    int ImageLoader::GetIntegralValue(int imgId, int hid, int wid) const
+    {
+        return mIntegralImage.at(imgId)[hid * mImageSize.at(imgId * 2 + 1) + wid];
     }
 
     void ImageLoader::ClearImageData(void)
