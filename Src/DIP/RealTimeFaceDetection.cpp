@@ -68,6 +68,21 @@ namespace MagicDIP
         mFeature = feature;
     }
 
+    HaarFeature HaarClassifier::GetFeature(void) const
+    {
+        return mFeature;
+    }
+
+    double HaarClassifier::GetThreshold(void) const
+    {
+        return mThreshold;
+    }
+
+    bool HaarClassifier::IsLess(void) const
+    {
+        return mIsLess;
+    }
+
     int HaarClassifier::Learn(const ImageLoader& faceImgLoader, const std::vector<double>& faceDataWeights, 
         const ImageLoader& nonFaceImgLoader, const std::vector<double>& nonFaceDataWeights, const std::vector<int>& nonFaceIndex,
         double* trainError)
@@ -96,55 +111,84 @@ namespace MagicDIP
 
         double minError = DBL_MAX; //1.7976931348623158e+308
         int faceId = 0;
-        int faceAccumulate = 0;
+        double faceAccumulate = 0;
         int nonFaceId = 0;
-        int nonFaceAccumulate = 0;
+        double nonFaceAccumulate = 0;
         while (faceId < faceDataCount || nonFaceId < nonFaceDataCount)
         {
             int threshold;
             if (faceId == faceDataCount)
             {
                 threshold = nonFaceFeatures.at(nonFaceId).mValue;
-                nonFaceAccumulate += nonFaceDataWeights.at(nonFaceFeatures.at(nonFaceId).mIndex);
-                nonFaceId++;
+                while (nonFaceFeatures.at(nonFaceId).mValue == threshold)
+                {
+                    nonFaceAccumulate += nonFaceDataWeights.at(nonFaceFeatures.at(nonFaceId).mIndex);
+                    nonFaceId++;
+                    if (nonFaceId == nonFaceDataCount)
+                    {
+                        break;
+                    }
+                }
             }
             else if (nonFaceId == nonFaceDataCount)
             {
                 threshold = faceFeatures.at(faceId).mValue;
-                faceAccumulate += faceDataWeights.at(faceFeatures.at(faceId).mIndex);
-                faceId++;
+                while (threshold == faceFeatures.at(faceId).mValue)
+                {
+                    faceAccumulate += faceDataWeights.at(faceFeatures.at(faceId).mIndex);
+                    faceId++;
+                    if (faceId == faceDataCount)
+                    {
+                        break;
+                    }
+                }
             }
             else
             {
                 if (faceFeatures.at(faceId).mValue < nonFaceFeatures.at(nonFaceId).mValue)
                 {
                     threshold = faceFeatures.at(faceId).mValue;
-                    faceAccumulate += faceDataWeights.at(faceFeatures.at(faceId).mIndex);
-                    faceId++;
+                    while (threshold == faceFeatures.at(faceId).mValue)
+                    {
+                        faceAccumulate += faceDataWeights.at(faceFeatures.at(faceId).mIndex);
+                        faceId++;
+                        if (faceId == faceDataCount)
+                        {
+                            break;
+                        }
+                    }
                 }
                 else
                 {
                     threshold = nonFaceFeatures.at(nonFaceId).mValue;
-                    nonFaceAccumulate += nonFaceDataWeights.at(nonFaceFeatures.at(nonFaceId).mIndex);
-                    nonFaceId++;
+                    while (nonFaceFeatures.at(nonFaceId).mValue == threshold)
+                    {
+                        nonFaceAccumulate += nonFaceDataWeights.at(nonFaceFeatures.at(nonFaceId).mIndex);
+                        nonFaceId++;
+                        if (nonFaceId == nonFaceDataCount)
+                        {
+                            break;
+                        }
+                    }
                 }
             }
             //Calculate Error
-            double lessError = faceAccumulate + nonFaceSum - nonFaceAccumulate;
+            double lessError = faceSum - faceAccumulate + nonFaceAccumulate; 
             if (lessError < minError)
             {
                 minError = lessError;
-                mThreshold = threshold;
+                mThreshold = threshold + 0.5;
                 mIsLess = true;
             }
-            double largeError = faceSum - faceAccumulate + nonFaceAccumulate;
+            double largeError = faceAccumulate + nonFaceSum - nonFaceAccumulate;
             if (largeError < minError)
             {
                 minError = largeError;
-                mThreshold = threshold;
+                mThreshold = threshold + 0.5;
                 mIsLess = false;
             }
-        }  
+        } 
+        *trainError = minError;
         
         return MAGIC_NO_ERROR;
     }
@@ -183,7 +227,7 @@ namespace MagicDIP
                 mFeature.sRow + mFeature.lRow - 1, mFeature.sCol + mFeature.lCol / 2 - 1);
             int negValue = ImgBoxValue(imgLoader, dataId, mFeature.sRow, mFeature.sCol + mFeature.lCol / 2,
                 mFeature.sRow + mFeature.lRow - 1, mFeature.sCol + mFeature.lCol - 1);
-            return posValue - negValue;
+            return (posValue - negValue) / (mFeature.lRow * mFeature.lCol / 2);
         }
         else if (mFeature.type == 1)
         {
@@ -191,7 +235,7 @@ namespace MagicDIP
                 mFeature.sRow + mFeature.lRow / 2 - 1, mFeature.sCol + mFeature.lCol - 1);
             int posValue = ImgBoxValue(imgLoader, dataId, mFeature.sRow + mFeature.lRow / 2, mFeature.sCol,
                 mFeature.sRow + mFeature.lRow - 1, mFeature.sCol + mFeature.lCol - 1);
-            return posValue - negValue;
+            return (posValue - negValue) / (mFeature.lRow * mFeature.lCol / 2);
         }
         else if (mFeature.type == 2)
         {
@@ -201,7 +245,7 @@ namespace MagicDIP
                 mFeature.sRow + mFeature.lRow - 1, mFeature.sCol + mFeature.lCol - 1);
             int negValue = ImgBoxValue(imgLoader, dataId, mFeature.sRow, mFeature.sCol + mFeature.lCol / 3,
                 mFeature.sRow + mFeature.lRow - 1, mFeature.sCol + mFeature.lCol * 2 / 3 - 1);
-            return posLeftValue + posRightValue - negValue;
+            return (posLeftValue + posRightValue - negValue) / (mFeature.lRow * mFeature.lCol / 3);
         }
         else if (mFeature.type == 3)
         {
@@ -213,7 +257,7 @@ namespace MagicDIP
                 mFeature.sRow + mFeature.lRow / 2 - 1, mFeature.sCol + mFeature.lCol - 1);
             int negLeftDown = ImgBoxValue(imgLoader, dataId, mFeature.sRow + mFeature.lRow / 2, mFeature.lCol, 
                 mFeature.sRow + mFeature.lRow - 1, mFeature.sCol + mFeature.lCol / 2 - 1);
-            return posTopLeft + posRightDown - negRightTop - negLeftDown;
+            return (posTopLeft + posRightDown - negRightTop - negLeftDown) / (mFeature.lRow * mFeature.lCol / 4);
         }
         else
         {
@@ -256,39 +300,39 @@ namespace MagicDIP
         {
             int posValue = ImgBoxValue(integralImg, imgW, mFeature.sRow, mFeature.sCol, 
                 mFeature.sRow + lRow - 1, mFeature.sCol + lCol / 2 - 1);
-            int negValue = ImgBoxValue(integralImg, imgW, mFeature.sRow, mFeature.sCol + lCol / 2 - 1,
+            int negValue = ImgBoxValue(integralImg, imgW, mFeature.sRow, mFeature.sCol + lCol / 2,
                 mFeature.sRow + lRow - 1, mFeature.sCol + lCol - 1);
-            return posValue - negValue;
+            return (posValue - negValue) / (lRow * lCol / 2);
         }
         else if (mFeature.type == 1)
         {
             int negValue = ImgBoxValue(integralImg, imgW, mFeature.sRow, mFeature.sCol, 
                 mFeature.sRow + lRow / 2 - 1, mFeature.sCol + lCol - 1);
-            int posValue = ImgBoxValue(integralImg, imgW, mFeature.sRow + lRow / 2 - 1, mFeature.sCol,
+            int posValue = ImgBoxValue(integralImg, imgW, mFeature.sRow + lRow / 2, mFeature.sCol,
                 mFeature.sRow + lRow - 1, mFeature.sCol + mFeature.lCol - 1);
-            return posValue - negValue;
+            return (posValue - negValue) / (lRow * lCol / 2);
         }
         else if (mFeature.type == 2)
         {
             int posLeftValue = ImgBoxValue(integralImg, imgW, mFeature.sRow, mFeature.sCol,
                 mFeature.sRow + lRow - 1, mFeature.sCol + lCol / 3 - 1);
-            int posRightValue = ImgBoxValue(integralImg, imgW, mFeature.sRow, mFeature.sCol + lCol * 2 / 3 - 1,
+            int posRightValue = ImgBoxValue(integralImg, imgW, mFeature.sRow, mFeature.sCol + lCol * 2 / 3,
                 mFeature.sRow + lRow - 1, mFeature.sCol + lCol - 1);
-            int negValue = ImgBoxValue(integralImg, imgW, mFeature.sRow, mFeature.sCol + lCol / 3 - 1,
+            int negValue = ImgBoxValue(integralImg, imgW, mFeature.sRow, mFeature.sCol + lCol / 3,
                 mFeature.sRow + lRow - 1, mFeature.sCol + lCol * 2 / 3 - 1);
-            return posLeftValue + posRightValue - negValue;
+            return (posLeftValue + posRightValue - negValue) / (lRow * lCol / 3);
         }
         else if (mFeature.type == 3)
         {
             int posTopLeft = ImgBoxValue(integralImg, imgW, mFeature.sRow, mFeature.sCol, 
                 mFeature.sRow + lRow / 2 - 1, mFeature.lCol + lCol / 2 - 1);
-            int posRightDown = ImgBoxValue(integralImg, imgW, mFeature.sRow + lRow / 2 - 1, mFeature.sCol + lCol / 2 - 1,
+            int posRightDown = ImgBoxValue(integralImg, imgW, mFeature.sRow + lRow / 2, mFeature.sCol + lCol / 2,
                 mFeature.sRow + lRow - 1, mFeature.sCol + lCol - 1);
-            int negRightTop = ImgBoxValue(integralImg, imgW, mFeature.sRow, mFeature.sCol + lCol / 2 - 1,
+            int negRightTop = ImgBoxValue(integralImg, imgW, mFeature.sRow, mFeature.sCol + lCol / 2,
                 mFeature.sRow + lRow / 2 - 1, mFeature.sCol + lCol - 1);
-            int negLeftDown = ImgBoxValue(integralImg, imgW, mFeature.sRow + lRow / 2 - 1, mFeature.lCol, 
+            int negLeftDown = ImgBoxValue(integralImg, imgW, mFeature.sRow + lRow / 2, mFeature.lCol, 
                 mFeature.sRow + lRow - 1, mFeature.sCol + lCol / 2 - 1);
-            return posTopLeft + posRightDown - negRightTop - negLeftDown;
+            return (posTopLeft + posRightDown - negRightTop - negLeftDown) / (lRow * lCol / 4);
         }
         else
         {
@@ -322,6 +366,7 @@ namespace MagicDIP
             return 0;
         }
     }
+
     unsigned int HaarClassifier::GetIntegralValue(const std::vector<unsigned int>& integralImg, int imgW, int hid, int wid) const
     {
         return integralImg.at(hid * imgW + wid);
@@ -370,10 +415,11 @@ namespace MagicDIP
             }
         }
         int nonFaceCount = nonFaceIndex.size();
+        DebugLog << "nonFaceCount: " << nonFaceCount << std::endl;
         if (nonFaceCount == 0)
         {
             DebugLog << "There is no non-face data now" << std::endl;
-            return MAGIC_INVALID_INPUT;
+            return MAGIC_EMPTY_INPUT;
         }
         std::vector<double> nonFaceWeights(nonFaceCount, 0.5 / nonFaceCount);
 
@@ -381,16 +427,19 @@ namespace MagicDIP
 
         std::vector<int> faceResFlag(faceCount);
         std::vector<int> nonFaceResFlag(nonFaceCount);
-        double epsilon = 1.0e-5;
+        double epsilon = 1.0e-10;
         mThreshold = 0.0;
         for (int levelId = 0; levelId < levelCount; levelId++)
         {
+            DebugLog << " AdaBoost level: " << levelId << std::endl;
             int weakClassifierId = TrainWeakClassifier(faceImgLoader, faceWeights, nonFaceImgLoader, nonFaceWeights,
                 nonFaceIndex);
             HaarClassifier* pWeakClassifier = NULL;
             if (weakClassifierId != -1)
             {
                 pWeakClassifier = mClassifierCandidates.at(weakClassifierId);
+                HaarFeature hf = pWeakClassifier->GetFeature();
+                DebugLog << "  Haar feature: " << hf.type << " " << hf.sRow << " " << hf.sCol << " " << hf.lRow << " " << hf.lCol << std::endl;
                 mClassifiers.push_back(pWeakClassifier);
                 mClassifierCandidates.at(weakClassifierId) = NULL;
             }
@@ -401,34 +450,50 @@ namespace MagicDIP
                 return MAGIC_INVALID_RESULT;
             } 
             double trainingError = 0.0;
+            int detectedFaceNum = 0;
             for (int faceId = 0; faceId < faceCount; faceId++)
             {
                 faceResFlag.at(faceId) = abs(1 - pWeakClassifier->Predict(faceImgLoader, faceId));
                 trainingError += faceWeights.at(faceId) * faceResFlag.at(faceId);
+                if (faceResFlag.at(faceId) == 0)
+                {
+                    detectedFaceNum++;
+                }
             }
+            DebugLog << "  Detect Face Right: " << detectedFaceNum << " faceCount: " << faceCount 
+                << " pro: " << float(detectedFaceNum) / float(faceCount) << std::endl;
+            int detectedNonFaceNum = 0;
             for (int nonFaceId = 0; nonFaceId < nonFaceCount; nonFaceId++)
             {
                 nonFaceResFlag.at(nonFaceId) = pWeakClassifier->Predict(nonFaceImgLoader, nonFaceIndex.at(nonFaceId));
                 trainingError += nonFaceWeights.at(nonFaceId) * nonFaceResFlag.at(nonFaceId);
+                if (nonFaceResFlag.at(nonFaceId) == 0)
+                {
+                    detectedNonFaceNum++;
+                }
             }
+            DebugLog << "  Detect Non-Face Right: " << detectedNonFaceNum << " nonFaceCount: " << nonFaceCount 
+                << " pro: " << float(detectedNonFaceNum) / float(nonFaceCount) << std::endl;
+            DebugLog << "  training error: " << trainingError << std::endl;
             if (trainingError < 0.5)
             {
-                DebugLog << "Weak Classifier " << levelId << ": " << trainingError << std::endl;
+                DebugLog << "  Weak Classifier " << levelId << ": " << trainingError << std::endl;
             }
 
             if (fabs(trainingError - 1.0) < epsilon)
             {
                 trainingError = 1.0 - epsilon;
-                DebugLog << "Weak Classifier " << levelId << ": is too weak!" << std::endl;
+                DebugLog << "  Weak Classifier " << levelId << ": is too weak!" << std::endl;
             }
             else if (fabs(trainingError) < epsilon)
             {
                 trainingError = epsilon;
-                DebugLog << "Weak Classifier " << levelId << ": is too good!" << std::endl;
+                DebugLog << "  Weak Classifier " << levelId << ": is too good!" << std::endl;
             }
 
             double beta = trainingError / (1.0 - trainingError);
             double weight = log(1.0 / beta);
+            DebugLog << "  weight: " << weight << std::endl;
             mClassifierWeights.push_back(weight);
             mThreshold += weight;
 
@@ -533,42 +598,46 @@ namespace MagicDIP
 
     void AdaBoostFaceDetection::GenerateClassifierCadidates(int baseImgSize)
     {
-        for (int sRow = 0; sRow < baseImgSize; sRow++)
+        //Enhancement: use uniform sampling strategy.
+        for (int sRow = 0; sRow < baseImgSize; sRow += 4)
         {
-            for (int sCol = 0; sCol < baseImgSize; sCol++)
+            for (int sCol = 0; sCol < baseImgSize; sCol += 4)
             {
+                int halfImgSize = baseImgSize / 2;
                 int colMaxLen = baseImgSize - sCol;
+                colMaxLen = colMaxLen > halfImgSize ? halfImgSize : colMaxLen;
                 int rowMaxLen = baseImgSize - sRow;
-                for (int lRow = 1; lRow <= rowMaxLen; lRow++)
+                rowMaxLen = rowMaxLen > halfImgSize ? halfImgSize : rowMaxLen;
+                for (int lRow = 4; lRow <= rowMaxLen; lRow += 4)
                 {
-                    for (int lCol = 2; lCol <= colMaxLen; lCol += 2)
+                    for (int lCol = 8; lCol <= colMaxLen; lCol += 8)
                     {
                         HaarFeature feature = {sRow, sCol, lRow, lCol, 0};
                         HaarClassifier* pClassifier = new HaarClassifier(feature);
                         mClassifierCandidates.push_back(pClassifier);
                     }
                 }
-                for (int lRow = 2; lRow <= rowMaxLen; lRow += 2)
+                for (int lRow = 8; lRow <= rowMaxLen; lRow += 8)
                 {
-                    for (int lCol = 1; lCol <= colMaxLen; lCol++)
+                    for (int lCol = 4; lCol <= colMaxLen; lCol += 4)
                     {
                         HaarFeature feature = {sRow, sCol, lRow, lCol, 1};
                         HaarClassifier* pClassifier = new HaarClassifier(feature);
                         mClassifierCandidates.push_back(pClassifier);
                     }
                 }
-                for (int lRow = 1; lRow <= rowMaxLen; lRow++)
+                for (int lRow = 4; lRow <= rowMaxLen; lRow += 4)
                 {
-                    for (int lCol = 3; lCol <= colMaxLen; lCol += 3)
+                    for (int lCol = 12; lCol <= colMaxLen; lCol += 12)
                     {
                         HaarFeature feature = {sRow, sCol, lRow, lCol, 2};
                         HaarClassifier* pClassifier = new HaarClassifier(feature);
                         mClassifierCandidates.push_back(pClassifier);
                     }
                 }
-                for (int lRow = 2; lRow <= rowMaxLen; lRow += 2)
+                for (int lRow = 8; lRow <= rowMaxLen; lRow += 8)
                 {
-                    for (int lCol = 2; lCol <= colMaxLen; lCol += 2)
+                    for (int lCol = 8; lCol <= colMaxLen; lCol += 8)
                     {
                         HaarFeature feature = {sRow, sCol, lRow, lCol, 3};
                         HaarClassifier* pClassifier = new HaarClassifier(feature);
@@ -605,7 +674,13 @@ namespace MagicDIP
             if (pClassifier != NULL)
             {
                 double trainError;
+                //double weakLearTime = MagicCore::ToolKit::GetTime();
                 int res = pClassifier->Learn(faceImgLoader, faceDataWeights, nonFaceImgLoader, nonFaceDataWeights, nonFaceIndex, &trainError);
+                HaarFeature hf = pClassifier->GetFeature();
+                /*DebugLog << "   weak candidate: " << cid << " trainError: " << trainError <<
+                    " feature: " << hf.type << " " << hf.sRow << " " << hf.sCol << " " << hf.lRow << " " << hf.lCol <<
+                    " threshold: " << pClassifier->GetThreshold() << " IsLess: " << pClassifier->IsLess() << std::endl;*/
+                    //<< " time: " << MagicCore::ToolKit::GetTime() - weakLearTime << std::endl;
                 if (res != MAGIC_NO_ERROR)
                 {
                     DebugLog << "HaarClassifier training failed" << std::endl;
@@ -694,6 +769,12 @@ namespace MagicDIP
             int res = pDetector->Learn(faceImgLoader, nonFaceImgLoader, nonFaceValidFlag, layerCounts.at(stageId));
             if (res != MAGIC_NO_ERROR)
             {
+                if (res == MAGIC_EMPTY_INPUT)
+                {
+                    DebugLog << "Stage: " << stageId << " is empty input, break" << std::endl;
+                    delete pDetector;
+                    break;
+                }
                 Reset();
                 DebugLog << "stage " << stageId << " learn failed" << std::endl;
                 return MAGIC_INVALID_RESULT;
@@ -711,6 +792,47 @@ namespace MagicDIP
             //DebugLog << "time: " << MagicCore::ToolKit::GetTime() - stageTime << std::endl;
         }
 
+        if (mCascadedDetectors.size() == 0)
+        {
+            return MAGIC_INVALID_RESULT;
+        }
+
+        //test
+        int detectedFaceNum = 0;
+        for (int faceDataId = 0; faceDataId < faceImages.size(); faceDataId++)
+        {
+            cv::Mat testImg = cv::imread(faceImages.at(faceDataId));
+            std::vector<int> faces;
+            int res = Detect(testImg, faces);
+            testImg.release();
+            if (res == 1)
+            {
+                detectedFaceNum++;
+                //DebugLog << "face image name: " << faceImages.at(faceDataId) << std::endl;
+            }
+            else if (res > 1)
+            {
+                DebugLog << "Test error: " << res << std::endl;
+            }
+        }
+        DebugLog << "Test: Detected face: " << detectedFaceNum << " face count: " << faceImages.size()
+            << " pro: " << float(detectedFaceNum) / float(faceImages.size()) << std::endl;
+
+        int detectedNonFaceNum = 0;
+        for (int nonFaceDataId = 0; nonFaceDataId < nonFaceImages.size(); nonFaceDataId++)
+        {
+            cv::Mat testImg = cv::imread(nonFaceImages.at(nonFaceDataId));
+            std::vector<int> faces;
+            int res = Detect(testImg, faces);
+            testImg.release();
+            if (res == 0)
+            {
+                detectedNonFaceNum++;
+            }
+        }
+        DebugLog << "Test: Detected non-face: " << detectedNonFaceNum << " face count: " << nonFaceImages.size()
+            << " pro: " << float(detectedNonFaceNum) / float(nonFaceImages.size()) << std::endl;
+
         return MAGIC_NO_ERROR;
     }
 
@@ -726,13 +848,13 @@ namespace MagicDIP
         int imgW = img.cols;
         std::vector<unsigned int> integralImg;
         ImageLoader::TransferToIntegralImg(img, integralImg);
-        while (curSubImgSize < imgH && curSubImgSize < imgW)
+        while (curSubImgSize <= imgH && curSubImgSize <= imgW)
         {
             int maxRow = imgH - curSubImgSize;
             int maxCol = imgW - curSubImgSize;
-            for (int rid = 0; rid < maxRow; rid += curStep)
+            for (int rid = 0; rid <= maxRow; rid += curStep)
             {
-                for (int cid = 0; cid < maxCol; cid += curStep)
+                for (int cid = 0; cid <= maxCol; cid += curStep)
                 {
                     if (DetectOneFace(integralImg, imgW, rid, cid, curScale))
                     {

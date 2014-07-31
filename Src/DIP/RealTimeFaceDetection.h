@@ -24,6 +24,9 @@ namespace MagicDIP
         ~HaarClassifier();
 
         void SetFeature(const HaarFeature& feature);
+        HaarFeature GetFeature(void) const;
+        double GetThreshold(void) const;
+        bool IsLess(void) const;
         int Learn(const ImageLoader& faceImgLoader, const std::vector<double>& faceDataWeights, const ImageLoader& nonFaceImgLoader,
             const std::vector<double>& nonFaceDataWeights, const std::vector<int>& nonFaceIndex, double* trainError);
         int Predict(const std::vector<unsigned int>& integralImg, int imgW, int sRow, int sCol, float scale) const;
@@ -40,7 +43,7 @@ namespace MagicDIP
 
     private:
         HaarFeature mFeature;
-        int mThreshold;
+        double mThreshold;
         bool mIsLess;
     };
 

@@ -118,7 +118,8 @@ namespace MagicApp
         }
         std::vector<int> layerCount;
         layerCount.push_back(2);
-        layerCount.push_back(100);
+        layerCount.push_back(5);
+        //layerCount.push_back(100);
         /*layerCount.reserve(64);
         layerCount.push_back(2);
         layerCount.push_back(10);
