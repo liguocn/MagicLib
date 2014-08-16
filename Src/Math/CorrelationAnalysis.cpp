@@ -1,4 +1,5 @@
 #include "CorrelationAnalysis.h"
+#include <math.h>
 
 namespace MagicMath
 {
