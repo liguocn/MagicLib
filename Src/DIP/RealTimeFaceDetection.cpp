@@ -1,7 +1,7 @@
 #include "RealTimeFaceDetection.h"
 #include "../Tool/ErrorCodes.h"
 #include "../Tool/LogSystem.h"
-#include "../Common/ToolKit.h"
+//#include "../Common/ToolKit.h"
 #include <map>
 #include <algorithm>
 #include <time.h>
@@ -921,7 +921,7 @@ namespace MagicDIP
             {
                 break;
             }
-            double levelTime = MagicCore::ToolKit::GetTime();
+            //double levelTime = MagicCore::ToolKit::GetTime();
             DebugLog << " AdaBoost level: " << levelId << std::endl;
             int weakClassifierId = TrainWeakClassifier(faceImgLoader, faceWeights, nonFaceImgLoader, nonFaceWeights,
                 nonFaceIndex);
@@ -1014,7 +1014,7 @@ namespace MagicDIP
             {
                 *itr /= weightSum;
             }
-            DebugLog << "  time: " << MagicCore::ToolKit::GetTime() - levelTime << std::endl;
+            //DebugLog << "  time: " << MagicCore::ToolKit::GetTime() - levelTime << std::endl;
         }
         //mThreshold *= 0.5;
         //Calculate mThreshold
@@ -1128,7 +1128,7 @@ namespace MagicDIP
     std::vector<int> AdaBoostFaceDetection::SampleHaarFeatures(const std::vector<HaarFeature> features, 
         double sampleRate) const
     {
-        double timeStart = MagicCore::ToolKit::GetTime();
+        //double timeStart = MagicCore::ToolKit::GetTime();
 
         int featureCount = features.size();
         int sampleCount = int(featureCount * sampleRate);
@@ -1172,7 +1172,7 @@ namespace MagicDIP
             curIndex = pos;
             sampleFlag.at(pos) = 1;
         }
-        DebugLog << "SampleHaarFeatures time: " << MagicCore::ToolKit::GetTime() - timeStart << std::endl;
+        //DebugLog << "SampleHaarFeatures time: " << MagicCore::ToolKit::GetTime() - timeStart << std::endl;
         return sampleIndex;
     }
 
