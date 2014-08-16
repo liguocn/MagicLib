@@ -50,20 +50,26 @@ namespace MagicApp
         }
     }
      
-    void FaceDetection::Save(const std::string& fileName) const
+    void FaceDetection::Save(const std::string& fileName, const std::string& detectFileName) const
     {
         std::ofstream fout(fileName);
         fout << mDm << std::endl;
-        std::string detectorFile = fileName;
-        std::string::size_type pos = detectorFile.rfind(".");
+        fout << detectFileName << std::endl;
+        std::string filePath = fileName;
+        std::string::size_type pos = filePath.rfind("/");
+        if (pos == std::string::npos)
+        {
+            pos = filePath.rfind("\\");
+        }
+        filePath.erase(pos);
+        filePath += "/";
+        std::string detectFileFullName = filePath + detectFileName;
         switch (mDm)
         {
         case DM_Default:
-            detectorFile.replace(pos, 4, ".abfd");
-            fout << detectorFile << std::endl;
             if (mpRealTimeDetector != NULL)
             {
-                mpRealTimeDetector->Save(detectorFile);
+                mpRealTimeDetector->Save(detectFileFullName);
             }
             else
             {
@@ -85,6 +91,17 @@ namespace MagicApp
         std::string detectorFile;
         fin >> detectorFile;
         fin.close();
+        //
+        std::string filePath = fileName;
+        std::string::size_type pos = filePath.rfind("/");
+        if (pos == std::string::npos)
+        {
+            pos = filePath.rfind("\\");
+        }
+        filePath.erase(pos);
+        filePath += "/";
+        detectorFile = filePath + detectorFile;
+        //
         switch (mDm)
         {
         case DM_Default:
@@ -97,6 +114,11 @@ namespace MagicApp
         default:
             break;
         }
+    }
+
+    void FaceDetection::SaveFeatureAsImage(const std::string& filePath) const
+    {
+        mpRealTimeDetector->SaveFeatureAsImage(filePath);
     }
 
     int FaceDetection::LearnRealTimeDetector(const std::string& faceFile, const std::string& nonFaceFile)
@@ -116,31 +138,134 @@ namespace MagicApp
         {
             mpRealTimeDetector = new MagicDIP::RealTimeFaceDetection;
         }
-        std::vector<int> layerCount;
-        layerCount.push_back(2);
-        layerCount.push_back(5);
-        //layerCount.push_back(100);
-        /*layerCount.reserve(64);
-        layerCount.push_back(2);
-        layerCount.push_back(10);
-        layerCount.push_back(25);
-        layerCount.push_back(25);
-        for (int layerId = 0; layerId < 4; layerId++)
+        /*std::vector<int> layerCount(4, 5);
+        for (int layerId = 0; layerId < 1000; layerId++)
         {
-            layerCount.push_back(50);
-        }
-        for (int layerId = 0; layerId < 8; layerId++)
-        {
-            layerCount.push_back(100);
-        }
-        for (int layerId = 0; layerId < 16; layerId++)
-        {
-            layerCount.push_back(200);
-        }
-        for (int layerId = 0; layerId < 32; layerId++)
-        {
-            layerCount.push_back(400);
+            layerCount.push_back(10);
         }*/
+        int iterCount = 100;
+        int levelCount = 8;
+        int maxLevelCount = 512;
+        int duplicateCount = 2;
+        int increaseNum = 2;
+        int maxDuplicateCount = 32;
+        std::vector<int> layerCount;
+        for (int iterId = 0; iterId < iterCount; iterId++)
+        {
+            for (int duplicateId = 0; duplicateId < duplicateCount; duplicateId++)
+            {
+                layerCount.push_back(levelCount);
+            }
+            levelCount *= 2;
+            levelCount = (levelCount > maxLevelCount ? maxLevelCount : levelCount);
+            if (iterId % increaseNum == 0)
+            {
+                duplicateCount *= 2;
+                duplicateCount = (duplicateCount > maxDuplicateCount ? maxDuplicateCount : duplicateCount);
+            }
+        }
+        /*std::vector<int> layerCount;
+        layerCount.push_back(10);
+        layerCount.push_back(10);
+        layerCount.push_back(10);
+        layerCount.push_back(10);
+        layerCount.push_back(20);
+        layerCount.push_back(20);
+        layerCount.push_back(20);
+        layerCount.push_back(20);
+        layerCount.push_back(20);
+        layerCount.push_back(20);
+        layerCount.push_back(20);
+        layerCount.push_back(20);
+        layerCount.push_back(40);
+        layerCount.push_back(40);
+        layerCount.push_back(40);
+        layerCount.push_back(40);
+        layerCount.push_back(40);
+        layerCount.push_back(40);
+        layerCount.push_back(40);
+        layerCount.push_back(40);
+        layerCount.push_back(80);
+        layerCount.push_back(80);
+        layerCount.push_back(80);
+        layerCount.push_back(80);
+        layerCount.push_back(80);
+        layerCount.push_back(80);
+        layerCount.push_back(80);
+        layerCount.push_back(80);
+        layerCount.push_back(80);
+        layerCount.push_back(80);
+        layerCount.push_back(80);
+        layerCount.push_back(80);
+        layerCount.push_back(80);
+        layerCount.push_back(80);
+        layerCount.push_back(80);
+        layerCount.push_back(80);
+        layerCount.push_back(160);
+        layerCount.push_back(160);
+        layerCount.push_back(160);
+        layerCount.push_back(160);
+        layerCount.push_back(160);
+        layerCount.push_back(160);
+        layerCount.push_back(160);
+        layerCount.push_back(160);
+        layerCount.push_back(160);
+        layerCount.push_back(160);
+        layerCount.push_back(160);
+        layerCount.push_back(160);
+        layerCount.push_back(160);
+        layerCount.push_back(160);
+        layerCount.push_back(160);
+        layerCount.push_back(160);
+        layerCount.push_back(240);
+        layerCount.push_back(240);
+        layerCount.push_back(240);
+        layerCount.push_back(240);
+        layerCount.push_back(240);
+        layerCount.push_back(240);
+        layerCount.push_back(240);
+        layerCount.push_back(240);
+        layerCount.push_back(240);
+        layerCount.push_back(240);
+        layerCount.push_back(240);
+        layerCount.push_back(240);
+        layerCount.push_back(240);
+        layerCount.push_back(240);
+        layerCount.push_back(240);
+        layerCount.push_back(240);
+        layerCount.push_back(320);
+        layerCount.push_back(320);
+        layerCount.push_back(320);
+        layerCount.push_back(320);
+        layerCount.push_back(320);
+        layerCount.push_back(320);
+        layerCount.push_back(320);
+        layerCount.push_back(320);
+        layerCount.push_back(320);
+        layerCount.push_back(320);
+        layerCount.push_back(320);
+        layerCount.push_back(320);
+        layerCount.push_back(320);
+        layerCount.push_back(320);
+        layerCount.push_back(320);
+        layerCount.push_back(320);
+        layerCount.push_back(400);
+        layerCount.push_back(400);
+        layerCount.push_back(400);
+        layerCount.push_back(400);
+        layerCount.push_back(400);
+        layerCount.push_back(400);
+        layerCount.push_back(400);
+        layerCount.push_back(400);
+        layerCount.push_back(400);
+        layerCount.push_back(400);
+        layerCount.push_back(400);
+        layerCount.push_back(400);
+        layerCount.push_back(400);
+        layerCount.push_back(400);
+        layerCount.push_back(400);
+        layerCount.push_back(400);*/
+        
         return mpRealTimeDetector->Learn(faceImgNames, nonFaceImgNames, layerCount);
     }
 
