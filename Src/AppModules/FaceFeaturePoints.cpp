@@ -250,7 +250,8 @@ namespace MagicApp
             for (int localFpsId = 0; localFpsId < oneGroupSize; localFpsId++)
             {
                 int curId = mStartIndex.at(groupId) + localFpsId;
-                int preId, nextId;
+                int preId = -1;
+                int nextId = -1;
                 if (mIsClose.at(groupId))
                 {
                     int preId = mStartIndex.at(groupId) + (localFpsId - 1 + oneGroupSize) % oneGroupSize;

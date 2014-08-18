@@ -89,7 +89,7 @@ BASIC_TYPE_SERIALIZER(unsigned long);
 BASIC_TYPE_SERIALIZER(float);
 BASIC_TYPE_SERIALIZER(double);
 BASIC_TYPE_SERIALIZER(bool);
-
+BASIC_TYPE_SERIALIZER(unsigned __int64);
 
 
 // serializer for std::vector
@@ -357,7 +357,7 @@ class SaveArchive : public OutputArchive<SaveArchive>
 public:
     SaveArchive(const char* filename)
     {
-        stream_ = fopen(filename, "w");
+        errno_t err = fopen_s(&stream_, filename, "w");
         own_stream_ = true;
     }
 
@@ -401,7 +401,7 @@ class LoadArchive : public InputArchive<LoadArchive>
 public:
     LoadArchive(const char* filename)
     {
-        stream_ = fopen(filename, "r");
+        errno_t err = fopen_s(&stream_, filename, "r");
         own_stream_ = true;
     }
 

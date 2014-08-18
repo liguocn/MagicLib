@@ -63,7 +63,7 @@ class Logger
             stream = stdout;
         }
         else {
-            stream = fopen(name,"w");
+            errno_t err = fopen_s(&stream, name,"w");
             if (stream == NULL) {
                 stream = stdout;
             }

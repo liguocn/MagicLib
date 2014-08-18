@@ -1,7 +1,7 @@
 #include "RealTimeFaceDetection.h"
 #include "../Tool/ErrorCodes.h"
 #include "../Tool/LogSystem.h"
-//#include "../Common/ToolKit.h"
+#include "../Tool/Profiler.h"
 #include <map>
 #include <algorithm>
 #include <time.h>
@@ -921,7 +921,7 @@ namespace MagicDIP
             {
                 break;
             }
-            //double levelTime = MagicCore::ToolKit::GetTime();
+            double levelTime = MagicTool::Profiler::GetTime();
             DebugLog << " AdaBoost level: " << levelId << std::endl;
             int weakClassifierId = TrainWeakClassifier(faceImgLoader, faceWeights, nonFaceImgLoader, nonFaceWeights,
                 nonFaceIndex);
@@ -1014,7 +1014,7 @@ namespace MagicDIP
             {
                 *itr /= weightSum;
             }
-            //DebugLog << "  time: " << MagicCore::ToolKit::GetTime() - levelTime << std::endl;
+            DebugLog << "  time: " << MagicTool::Profiler::GetTime() - levelTime << std::endl;
         }
         //mThreshold *= 0.5;
         //Calculate mThreshold
@@ -1501,7 +1501,7 @@ namespace MagicDIP
         for (int stageId = 0; stageId < stageCount; stageId++)
         {
             DebugLog << "Stage " << stageId << std::endl;
-            //double stageTime = MagicCore::ToolKit::GetTime();
+            double stageTime = MagicTool::Profiler::GetTime();
             int levelCount = layerCounts.at(stageId);
             bool isEmptyInput = false;
             while (true)
@@ -1560,7 +1560,7 @@ namespace MagicDIP
             {
                 break;
             }
-            //DebugLog << "time: " << MagicCore::ToolKit::GetTime() - stageTime << std::endl;
+            DebugLog << "time: " << MagicTool::Profiler::GetTime() - stageTime << std::endl;
         }
 
         if (mCascadedDetectors.size() == 0)
