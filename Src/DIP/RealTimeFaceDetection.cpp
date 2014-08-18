@@ -238,7 +238,8 @@ namespace
     private:
         int* mpFeatureValues;
         int mImageCount;
-        std::map<int, int> mIndexMap;
+        //std::map<int, int> mIndexMap;
+        std::vector<int> mIndexMap;
     };
 
     FaceFeatureCache::FaceFeatureCache() :
@@ -258,10 +259,10 @@ namespace
     {
         Reset();
         mImageCount = imgLoader.GetImageCount();
-        int classifierCount = classifiers.size();
+        long long classifierCount = classifiers.size();
         try
         {
-            mpFeatureValues = new int[mImageCount * classifierCount];
+            mpFeatureValues = new int[long long(mImageCount) * classifierCount];
         }
         catch(const std::bad_alloc& e)
         {
@@ -272,11 +273,11 @@ namespace
             }
             return false;
         }
-        for (int classifierId = 0; classifierId < classifierCount; classifierId++)
+        for (long long classifierId = 0; classifierId < classifierCount; classifierId++)
         {
             MagicDIP::HaarFeature feature = classifiers.at(classifierId)->GetFeature();
-            int baseIndex = classifierId * mImageCount;
-            for (int imgId = 0; imgId < mImageCount; imgId++)
+            long long baseIndex = classifierId * mImageCount;
+            for (long long imgId = 0; imgId < mImageCount; imgId++)
             {
                 mpFeatureValues[baseIndex + imgId] = CalFeatureValue(imgLoader, imgId, feature);
             }
@@ -293,10 +294,10 @@ namespace
         {
             return false;
         }
-        int classifierCount = classifiers.size();
+        long long classifierCount = classifiers.size();
         try
         {
-            mpFeatureValues = new int[mImageCount * classifierCount];
+            mpFeatureValues = new int[long long(mImageCount) * classifierCount];
         }
         catch(const std::bad_alloc& e)
         {
@@ -308,15 +309,16 @@ namespace
             return false;
         }
         //Construct index map
+        mIndexMap = std::vector<int>(imgLoader.GetImageCount(), -1);
         for (int imgId = 0; imgId < mImageCount; imgId++)
         {
             mIndexMap[imgIndex.at(imgId)] = imgId;
         }
-        for (int classifierId = 0; classifierId < classifierCount; classifierId++)
+        for (long long classifierId = 0; classifierId < classifierCount; classifierId++)
         {
             MagicDIP::HaarFeature feature = classifiers.at(classifierId)->GetFeature();
-            int baseIndex = classifierId * mImageCount;
-            for (int imgId = 0; imgId < mImageCount; imgId++)
+            long long baseIndex = classifierId * mImageCount;
+            for (long long imgId = 0; imgId < mImageCount; imgId++)
             {
                 mpFeatureValues[baseIndex + imgId] = CalFeatureValue(imgLoader, imgIndex.at(imgId), feature);
             }
@@ -328,11 +330,11 @@ namespace
     {
         if (mIndexMap.size() == 0)
         {
-            return mpFeatureValues[classifierId * mImageCount + imgId];
+            return mpFeatureValues[long long(classifierId) * mImageCount + long long(imgId)];
         }
         else
         {
-            return mpFeatureValues[ classifierId * mImageCount + mIndexMap[imgId] ];
+            return mpFeatureValues[ long long(classifierId) * mImageCount + long long(mIndexMap[imgId]) ];
         }
     }
 
@@ -398,11 +400,11 @@ namespace MagicDIP
         const ImageLoader& nonFaceImgLoader, const std::vector<double>& nonFaceDataWeights, const std::vector<int>& nonFaceIndex,
         double* trainError)
     {
-        //double startTime = MagicCore::ToolKit::GetTime();
+        //double startTime = MagicTool::Profiler::GetTime();
         int faceDataCount = faceDataWeights.size();
         std::vector<ValueIndex> faceFeatures(faceDataCount);
         double faceSum = 0;
-        //double featureTimeStart = MagicCore::ToolKit::GetTime();
+        //double featureTimeStart = MagicTool::Profiler::GetTime();
         for (int faceId = 0; faceId < faceDataCount; faceId++)
         {
             //faceFeatures.at(faceId).mValue = CalFeatureValue(faceImgLoader, faceId, mFeature);
@@ -410,15 +412,15 @@ namespace MagicDIP
             faceFeatures.at(faceId).mIndex = faceId;
             faceSum += faceDataWeights.at(faceId);
         }
-        //double featureTime = MagicCore::ToolKit::GetTime() - featureTimeStart;
-        //double sortStartTime = MagicCore::ToolKit::GetTime();
+        //double featureTime = MagicTool::Profiler::GetTime() - featureTimeStart;
+        //double sortStartTime = MagicTool::Profiler::GetTime();
         std::sort(faceFeatures.begin(), faceFeatures.end());
-        //double sortTime =  MagicCore::ToolKit::GetTime() - sortStartTime;
+        //double sortTime = MagicTool::Profiler::GetTime() - sortStartTime;
 
         int nonFaceDataCount = nonFaceDataWeights.size();
         std::vector<ValueIndex> nonFaceFeatures(nonFaceDataCount);
         double nonFaceSum = 0;
-        //featureTimeStart = MagicCore::ToolKit::GetTime();
+        //featureTimeStart = MagicTool::Profiler::GetTime();
         for (int nonFaceId = 0; nonFaceId < nonFaceDataCount; nonFaceId++)
         {
             //nonFaceFeatures.at(nonFaceId).mValue = CalFeatureValue(nonFaceImgLoader, nonFaceIndex.at(nonFaceId), mFeature);
@@ -426,10 +428,10 @@ namespace MagicDIP
             nonFaceFeatures.at(nonFaceId).mIndex = nonFaceId;
             nonFaceSum += nonFaceDataWeights.at(nonFaceId);
         }
-        //featureTime += MagicCore::ToolKit::GetTime() - featureTimeStart;
-        //sortStartTime = MagicCore::ToolKit::GetTime();
+        //featureTime += MagicTool::Profiler::GetTime() - featureTimeStart;
+        //sortStartTime = MagicTool::Profiler::GetTime();
         std::sort(nonFaceFeatures.begin(), nonFaceFeatures.end());
-        //sortTime += MagicCore::ToolKit::GetTime() - sortStartTime;
+        //sortTime += MagicTool::Profiler::GetTime() - sortStartTime;
 
         double minError = DBL_MAX; //1.7976931348623158e+308
         int faceId = 0;
@@ -511,7 +513,7 @@ namespace MagicDIP
             }
         } 
         *trainError = minError;
-        //double totalTime = MagicCore::ToolKit::GetTime() - startTime;
+        //double totalTime = MagicTool::Profiler::GetTime() - startTime;
         //DebugLog << "    weak learn total time: " << totalTime << " sortTime: " << sortTime / totalTime 
         //    << " featureTime: " << featureTime / totalTime << std::endl;
         
@@ -906,7 +908,7 @@ namespace MagicDIP
         GenerateClassifierCadidates(faceImgLoader.GetImageWidth(0));
 
         //Generate Feature Value Cache
-        int nonFaceCacheSize = nonFaceCount * mClassifierCandidates.size() * 4;
+        long long nonFaceCacheSize = long long(nonFaceCount) * mClassifierCandidates.size() * 4;
         DebugLog << "nonFaceCacheSize: " << nonFaceCacheSize << std::endl;
         GenerateFeatureValueCache(&faceImgLoader, &nonFaceImgLoader, nonFaceIndex);
 
@@ -1498,16 +1500,21 @@ namespace MagicDIP
         std::vector<bool> nonFaceValidFlag(nonFaceImages.size(), 1);
         DebugLog << "Learn Cascaded detectors..." << std::endl;
         srand(time(NULL)); //sample feature
+
+        int curStageLevelCount = 10;
+        int levelCountDelta = 10;
+        int maxStageLevelCount = 200;
+        double acceptNonFaceDetectRate = 0.05;
         for (int stageId = 0; stageId < stageCount; stageId++)
         {
-            DebugLog << "Stage " << stageId << std::endl;
+            DebugLog << "Stage " << stageId << " level count: " << curStageLevelCount << std::endl;
             double stageTime = MagicTool::Profiler::GetTime();
-            int levelCount = layerCounts.at(stageId);
+            //int levelCount = layerCounts.at(stageId);
             bool isEmptyInput = false;
             while (true)
             {
                 AdaBoostFaceDetection* pDetector = new AdaBoostFaceDetection;
-                int res = pDetector->Learn(faceImgLoader, nonFaceImgLoader, nonFaceValidFlag, levelCount);
+                int res = pDetector->Learn(faceImgLoader, nonFaceImgLoader, nonFaceValidFlag, curStageLevelCount);
                 if (res != MAGIC_NO_ERROR)
                 {
                     if (res == MAGIC_EMPTY_INPUT)
@@ -1517,43 +1524,45 @@ namespace MagicDIP
                         isEmptyInput = true;
                         break;
                     }
-                    /*else if (res == MAGIC_NOT_ENOUGH_INPUT)
-                    {
-                        DebugLog << "Stage: " << stageId << " level is not enough, continue" << std::endl;
-                        delete pDetector;
-                        pDetector = NULL;
-                        levelCount += layerCounts.at(stageId);
-                        continue;
-                    }*/
                     Reset();
                     DebugLog << "stage " << stageId << " learn failed" << std::endl;
                     return MAGIC_INVALID_RESULT;
                 }
             
                 //filter non faces
-                int nonFaceDetectCount = 0;
+                //int nonFaceDetectCount = 0;
+                std::vector<int> nonFaceDetectIndex;
+                int validNonFaceCount = 0;
                 for (int nonFaceId = 0; nonFaceId < nonFaceValidFlag.size(); nonFaceId++)
                 {
                     if (nonFaceValidFlag.at(nonFaceId))
                     {
+                        validNonFaceCount++;
                         if (pDetector->Predict(nonFaceImgLoader, nonFaceId) == 0)
                         {
-                            nonFaceValidFlag.at(nonFaceId) = 0;
-                            nonFaceDetectCount++;
+                            //nonFaceValidFlag.at(nonFaceId) = 0;
+                            //nonFaceDetectCount++;
+                            nonFaceDetectIndex.push_back(nonFaceId);
                         }
                     }
                 }
-                if (nonFaceDetectCount > 0)
+                if (nonFaceDetectIndex.size() > validNonFaceCount * acceptNonFaceDetectRate)
                 {
+                    for (int nonFaceDetectId = 0; nonFaceDetectId < nonFaceDetectIndex.size(); nonFaceDetectId++)
+                    {
+                        nonFaceValidFlag.at(nonFaceDetectIndex.at(nonFaceDetectId)) = 0;
+                    }
                     mCascadedDetectors.push_back(pDetector);
                     break;
                 }
                 else
                 {
-                    DebugLog << "Stage: " << stageId << " No detect non-face, continue" << std::endl;
+                    DebugLog << "Stage: " << stageId << " few detect non-face: " << nonFaceDetectIndex.size()
+                        << " " << validNonFaceCount << ", continue" << std::endl;
                     delete pDetector;
                     pDetector = NULL;
-                    levelCount += layerCounts.at(stageId);
+                    curStageLevelCount += levelCountDelta;
+                    curStageLevelCount = curStageLevelCount > maxStageLevelCount ? maxStageLevelCount : curStageLevelCount;
                 }
             }
             if (isEmptyInput)
