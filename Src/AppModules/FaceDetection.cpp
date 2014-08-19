@@ -143,7 +143,7 @@ namespace MagicApp
         {
             layerCount.push_back(10);
         }*/
-        int iterCount = 100;
+        /*int iterCount = 100;
         int levelCount = 8;
         int maxLevelCount = 512;
         int duplicateCount = 2;
@@ -163,9 +163,9 @@ namespace MagicApp
                 duplicateCount *= 2;
                 duplicateCount = (duplicateCount > maxDuplicateCount ? maxDuplicateCount : duplicateCount);
             }
-        }
+        }*/
         
-        return mpRealTimeDetector->Learn(faceImgNames, nonFaceImgNames, layerCount);
+        return mpRealTimeDetector->Learn(faceImgNames, nonFaceImgNames);
     }
 
     int FaceDetection::GetImageNames(const std::string& imgfile, std::vector<std::string>& imgNames) const

@@ -27,8 +27,9 @@ namespace MagicDIP
         HaarFeature GetFeature(void) const;
         double GetThreshold(void) const;
         bool IsLess(void) const;
-        int Learn(const ImageLoader& faceImgLoader, const std::vector<double>& faceDataWeights, const ImageLoader& nonFaceImgLoader,
-            const std::vector<double>& nonFaceDataWeights, const std::vector<int>& nonFaceIndex, double* trainError);
+        int Learn(const ImageLoader& faceImgLoader, const std::vector<double>& faceDataWeights, const std::vector<int>& faceIndex, 
+            const ImageLoader& nonFaceImgLoader, const std::vector<double>& nonFaceDataWeights, const std::vector<int>& nonFaceIndex, 
+            double* trainError);
         int Predict(const std::vector<unsigned int>& integralImg, int imgW, int sRow, int sCol, float scale) const;
         int Predict(const ImageLoader& imgLoader, int dataId) const;
         void Save(std::ofstream& fout) const;
@@ -56,9 +57,11 @@ namespace MagicDIP
     {
     public:
         AdaBoostFaceDetection();
+        AdaBoostFaceDetection(double detectionRate);
         ~AdaBoostFaceDetection();
 
-        int Learn(const ImageLoader& faceImgLoader, const ImageLoader& nonFaceImgLoader, const std::vector<bool>& nonFaceValidFlag,
+        int Learn(const ImageLoader& faceImgLoader, const std::vector<bool>& faceValidFlag,
+            const ImageLoader& nonFaceImgLoader, const std::vector<bool>& nonFaceValidFlag,
             int levelCount);
         int Predict(const std::vector<unsigned int>& integralImg, int imgW, int sRow, int sCol, double scale) const;
         int Predict(const ImageLoader& imgLoader, int dataId) const;
@@ -69,12 +72,13 @@ namespace MagicDIP
     private:
         void GenerateClassifierCadidates(int baseImgSize);
         std::vector<int> SampleHaarFeatures(const std::vector<HaarFeature> features, double sampleRate) const;
-        void GenerateFeatureValueCache(const ImageLoader* pFaceImgLoader, const ImageLoader* pNonFaceImgLoader, 
-            const std::vector<int>& nonFaceIndex) const;
+        void GenerateFeatureValueCache(const ImageLoader* pFaceImgLoader, const std::vector<int>& faceIndex,
+            const ImageLoader* pNonFaceImgLoader, const std::vector<int>& nonFaceIndex) const;
         void ClearFeatureValueCache(void) const;
         int RemoveSimilarClassifierCandidates(const HaarFeature& hf);
         void ClearClassifierCadidates(void);
         int TrainWeakClassifier(const ImageLoader& faceImgLoader, const std::vector<double>& faceDataWeights, 
+            const std::vector<int>& faceIndex,
             const ImageLoader& nonFaceImgLoader, const std::vector<double>& nonFaceDataWeights, 
             const std::vector<int>& nonFaceIndex);
         void Reset(void);
@@ -94,8 +98,7 @@ namespace MagicDIP
         RealTimeFaceDetection();
         ~RealTimeFaceDetection();
 
-        int Learn(const std::vector<std::string>& faceImages, const std::vector<std::string>& nonFaceImages, 
-            const std::vector<int>& layerCounts);
+        int Learn(const std::vector<std::string>& faceImages, const std::vector<std::string>& nonFaceImages);
         int Detect(const cv::Mat& img, std::vector<int>& faces) const;
         void Save(const std::string& fileName) const;
         void Load(const std::string& fileName);
