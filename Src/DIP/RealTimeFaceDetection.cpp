@@ -168,20 +168,24 @@ namespace
         }
     }
 
-    static int CalFeatureValue(const std::vector<unsigned int>& integralImg, int imgW, int sRow, int sCol, float scale,
-        const MagicDIP::HaarFeature& feature)
+    static int CalFeatureValue(const std::vector<unsigned int>& integralImg, int imgW, 
+        int sRow, int sCol, int boxSize, float scale, int avgImgGray, const MagicDIP::HaarFeature& feature)
     {
         int lRow = floor(feature.lRow * scale + 0.5);
         int lCol = floor(feature.lCol * scale + 0.5);
         int sRowAbs = floor(feature.sRow * scale + 0.5) + sRow;
         int sColAbs = floor(feature.sCol * scale + 0.5) + sCol;
+        double localAvg = ImgBoxValue(integralImg, imgW, sRow, sCol, sRow + boxSize - 1, sCol + boxSize - 1) / 
+            (double(boxSize * boxSize));
+        double avgScale = avgImgGray / (localAvg + 0.1);
+        //DebugLog << "localScale: " << avgScale << " localAvg: " << localAvg << std::endl;
         if (feature.type == 0)
         {
             int posValue = ImgBoxValue(integralImg, imgW, sRowAbs, sColAbs, 
                 sRowAbs + lRow - 1, sColAbs + lCol / 2 - 1);
             int negValue = ImgBoxValue(integralImg, imgW, sRowAbs, sColAbs + lCol / 2,
                 sRowAbs + lRow - 1, sColAbs + lCol - 1);
-            return (posValue - negValue) / (lRow * lCol / 2);
+            return int( (posValue - negValue) / (lRow * lCol / 2) * avgScale );
         }
         else if (feature.type == 1)
         {
@@ -189,7 +193,7 @@ namespace
                 sRowAbs + lRow / 2 - 1, sColAbs + lCol - 1);
             int posValue = ImgBoxValue(integralImg, imgW, sRowAbs + lRow / 2, sColAbs,
                 sRowAbs + lRow - 1, sColAbs + lCol - 1);
-            return (posValue - negValue) / (lRow * lCol / 2);
+            return int( (posValue - negValue) / (lRow * lCol / 2) * avgScale );
         }
         else if (feature.type == 2)
         {
@@ -199,7 +203,7 @@ namespace
                 sRowAbs + lRow - 1, sColAbs + lCol - 1);
             int negValue = ImgBoxValue(integralImg, imgW, sRowAbs, sColAbs + lCol / 3,
                 sRowAbs + lRow - 1, sColAbs + lCol * 2 / 3 - 1);
-            return (posLeftValue + posRightValue - negValue) / (lRow * lCol / 3);
+            return int( (posLeftValue + posRightValue - negValue) / (lRow * lCol / 3) * avgScale );
         }
         else if (feature.type == 3)
         {
@@ -211,7 +215,7 @@ namespace
                 sRowAbs + lRow / 2 - 1, sColAbs + lCol - 1);
             int negLeftDown = ImgBoxValue(integralImg, imgW, sRowAbs + lRow / 2, sColAbs, 
                 sRowAbs + lRow - 1, sColAbs + lCol / 2 - 1);
-            return (posTopLeft + posRightDown - negRightTop - negLeftDown) / (lRow * lCol / 4);
+            return int( (posTopLeft + posRightDown - negRightTop - negLeftDown) / (lRow * lCol / 4) * avgScale );
         }
         else
         {
@@ -509,9 +513,10 @@ namespace MagicDIP
         return MAGIC_NO_ERROR;
     }
      
-    int HaarClassifier::Predict(const std::vector<unsigned int>& integralImg, int imgW, int sRow, int sCol, float scale) const
+    int HaarClassifier::Predict(const std::vector<unsigned int>& integralImg, int imgW,
+        int sRow, int sCol, int boxSize, float scale, int avgImgGray) const
     {
-        int featureValue = CalFeatureValue(integralImg, imgW, sRow, sCol, scale, mFeature);
+        int featureValue = CalFeatureValue(integralImg, imgW, sRow, sCol, boxSize, scale, avgImgGray, mFeature);
         if (mIsLess)
         {
             return featureValue < mThreshold;
@@ -1052,13 +1057,14 @@ namespace MagicDIP
         return MAGIC_NO_ERROR;
     }
     
-    int AdaBoostFaceDetection::Predict(const std::vector<unsigned int>& integralImg, int imgW, int sRow, int sCol, double scale) const
+    int AdaBoostFaceDetection::Predict(const std::vector<unsigned int>& integralImg, int imgW, 
+        int sRow, int sCol, int boxSize, double scale, int avgImgGray) const
     {
         double res = 0.0;
         int classifierCount = mClassifierWeights.size();
         for (int cid = 0; cid < classifierCount; cid++)
         {
-            res += mClassifiers.at(cid)->Predict(integralImg, imgW, sRow, sCol, scale) * mClassifierWeights.at(cid);
+            res += mClassifiers.at(cid)->Predict(integralImg, imgW, sRow, sCol, boxSize, scale, avgImgGray) * mClassifierWeights.at(cid);
         }
         if (res > mThreshold)
         {
@@ -1463,6 +1469,7 @@ namespace MagicDIP
 
     RealTimeFaceDetection::RealTimeFaceDetection() : 
         mBaseImgSize(0),
+        mAvgImgGray(100),
         mCascadedDetectors()
     {
     }
@@ -1508,10 +1515,9 @@ namespace MagicDIP
         int curStageLevelCount = 8;
         int levelCountDelta = 5;
         int maxStageLevelCount = 200;
-        int restartLevelCount = 50;
-        double acceptNonFaceDetectRate = 0.05;
-        int maxTryNum = 3;
-        int maxPassNum = 3;
+        int restartLevelCount = 50;        
+        int maxTryNum = 6;
+        int maxPassNum = 2;
         for (int stageId = 0; stageId < stageCount; stageId++)
         {
             if (curStageLevelCount == maxStageLevelCount)
@@ -1519,9 +1525,12 @@ namespace MagicDIP
                 curStageLevelCount = restartLevelCount + rand() % (maxStageLevelCount - restartLevelCount);
                 DebugLog << "Stage " << stageId << " restart level count: " << curStageLevelCount << std::endl;
             }
+            double acceptNonFaceDetectRate = 0.1;
             int tryNum = maxTryNum;
             int passNum = maxPassNum;
             bool isEmptyInput = false;
+            double avgNonFaceDetectRate = 0.0;
+            int detectRateTryNum = 0;
             double stageTime = MagicTool::Profiler::GetTime();
             while (true)
             {
@@ -1569,7 +1578,10 @@ namespace MagicDIP
                         }
                     }
                 }
-                if (nonFaceDetectIndex.size() > validNonFaceCount * acceptNonFaceDetectRate)
+                double nonFaceDetectRate = double(nonFaceDetectIndex.size()) / (validNonFaceCount + 1.0);
+                avgNonFaceDetectRate += nonFaceDetectRate;
+                detectRateTryNum++;
+                if (avgNonFaceDetectRate > acceptNonFaceDetectRate)
                 {
                     for (int nonFaceDetectId = 0; nonFaceDetectId < nonFaceDetectIndex.size(); nonFaceDetectId++)
                     {
@@ -1585,7 +1597,8 @@ namespace MagicDIP
                 else
                 {
                     DebugLog << "Stage: " << stageId << " few detect non-face: " << nonFaceDetectIndex.size()
-                        << " " << validNonFaceCount << " " << double(nonFaceDetectIndex.size()) / (validNonFaceCount + 1) << std::endl;             
+                        << " " << validNonFaceCount << " rate: " << nonFaceDetectRate 
+                        << " avgRate: " << avgNonFaceDetectRate / detectRateTryNum << std::endl;             
                     if (tryNum > 0)
                     {
                         delete pDetector;
@@ -1609,8 +1622,16 @@ namespace MagicDIP
                         }
                         else
                         {
-                            DebugLog << "Stage: " << stageId << " finally accept." << std::endl;
-                            for (int nonFaceDetectId = 0; nonFaceDetectId < nonFaceDetectIndex.size(); nonFaceDetectId++)
+                            delete pDetector;
+                            pDetector = NULL;
+                            acceptNonFaceDetectRate = avgNonFaceDetectRate / detectRateTryNum;
+                            avgNonFaceDetectRate = 0;
+                            detectRateTryNum = 0;
+                            passNum = 0;
+                            tryNum = maxTryNum;
+                            DebugLog << "Stage: " << stageId << " finally decrease detect rate: " << acceptNonFaceDetectRate << std::endl;
+                            continue;
+                           /* for (int nonFaceDetectId = 0; nonFaceDetectId < nonFaceDetectIndex.size(); nonFaceDetectId++)
                             {
                                 nonFaceValidFlag.at(nonFaceDetectIndex.at(nonFaceDetectId)) = 0;
                             }
@@ -1618,8 +1639,8 @@ namespace MagicDIP
                             {
                                 faceValidFlag.at(faceDetectFalseIndex.at(faceFalseId)) = 0;
                             }
-                            mCascadedDetectors.push_back(pDetector);
-                            break;
+                            mCascadedDetectors.push_back(pDetector);*/
+                            //break;
                         }
                     }
                 }
@@ -1697,7 +1718,7 @@ namespace MagicDIP
             {
                 for (int cid = 0; cid <= maxCol; cid += curStep)
                 {
-                    if (DetectOneFace(integralImg, imgW, rid, cid, curScale))
+                    if (DetectOneFace(integralImg, imgW, rid, cid, curSubImgSize, curScale, mAvgImgGray))
                     {
                         faces.push_back(rid);
                         faces.push_back(cid);
@@ -1751,7 +1772,8 @@ namespace MagicDIP
         }
     }
 
-    int RealTimeFaceDetection::DetectOneFace(const std::vector<unsigned int>& integralImg, int imgW, int sRow, int sCol, double scale) const
+    int RealTimeFaceDetection::DetectOneFace(const std::vector<unsigned int>& integralImg, int imgW, 
+        int sRow, int sCol, int boxSize, double scale, int avgImgGray) const
     {
         if (mCascadedDetectors.size() == 0)
         {
@@ -1759,7 +1781,7 @@ namespace MagicDIP
         }
         for (std::vector<AdaBoostFaceDetection*>::const_iterator itr = mCascadedDetectors.begin(); itr != mCascadedDetectors.end(); itr++)
         {
-            if ( (*itr)->Predict(integralImg, imgW, sRow, sCol, scale) == 0 )
+            if ( (*itr)->Predict(integralImg, imgW, sRow, sCol, boxSize, scale, avgImgGray) == 0 )
             {
                 return 0;
             }

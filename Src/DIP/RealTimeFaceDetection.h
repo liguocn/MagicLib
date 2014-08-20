@@ -30,7 +30,8 @@ namespace MagicDIP
         int Learn(const ImageLoader& faceImgLoader, const std::vector<double>& faceDataWeights, const std::vector<int>& faceIndex, 
             const ImageLoader& nonFaceImgLoader, const std::vector<double>& nonFaceDataWeights, const std::vector<int>& nonFaceIndex, 
             double* trainError);
-        int Predict(const std::vector<unsigned int>& integralImg, int imgW, int sRow, int sCol, float scale) const;
+        int Predict(const std::vector<unsigned int>& integralImg, int imgW, 
+            int sRow, int sCol, int boxSize, float scale, int avgImgGray) const;
         int Predict(const ImageLoader& imgLoader, int dataId) const;
         void Save(std::ofstream& fout) const;
         void Load(std::ifstream& fin);
@@ -63,7 +64,8 @@ namespace MagicDIP
         int Learn(const ImageLoader& faceImgLoader, const std::vector<bool>& faceValidFlag,
             const ImageLoader& nonFaceImgLoader, const std::vector<bool>& nonFaceValidFlag,
             int levelCount);
-        int Predict(const std::vector<unsigned int>& integralImg, int imgW, int sRow, int sCol, double scale) const;
+        int Predict(const std::vector<unsigned int>& integralImg, int imgW, 
+            int sRow, int sCol, int boxSize, double scale, int avgImgGray) const;
         int Predict(const ImageLoader& imgLoader, int dataId) const;
         void Save(std::ofstream& fout) const;
         void Load(std::ifstream& fin);
@@ -105,13 +107,15 @@ namespace MagicDIP
         void SaveFeatureAsImage(const std::string& filePath) const;
 
     private:
-        int DetectOneFace(const std::vector<unsigned int>& integralImg, int imgW, int sRow, int sCol, double scale) const;
+        int DetectOneFace(const std::vector<unsigned int>& integralImg, int imgW, 
+            int sRow, int sCol, int boxSize, double scale, int avgImgGray) const;
         void PostProcessFaces(std::vector<int>& faces) const;
         bool IsTheSameFace(int sRowA, int sColA, int lRowA, int lColA, int sRowB, int sColB, int lRowB, int lColB) const;
         void Reset(void);
 
     private:
         int mBaseImgSize;
+        int mAvgImgGray; // This is a hard code here, we use 100 in training data.
         std::vector<AdaBoostFaceDetection* > mCascadedDetectors;
     };
 }
