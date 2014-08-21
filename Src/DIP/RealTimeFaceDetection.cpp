@@ -178,6 +178,7 @@ namespace
         double localAvg = ImgBoxValue(integralImg, imgW, sRow, sCol, sRow + boxSize - 1, sCol + boxSize - 1) / 
             (double(boxSize * boxSize));
         double avgScale = avgImgGray / (localAvg + 0.1);
+        //double avgScale = 1.0;
         //DebugLog << "localScale: " << avgScale << " localAvg: " << localAvg << std::endl;
         if (feature.type == 0)
         {
@@ -1488,7 +1489,7 @@ namespace MagicDIP
 
         Reset();
         //int stageCount = layerCounts.size();
-        int stageCount = 1000000000;
+        int stageCount = 1000; //modify_flag
         mCascadedDetectors.reserve(stageCount);
 
         ImageLoader faceImgLoader;
@@ -1499,6 +1500,7 @@ namespace MagicDIP
 
         mBaseImgSize = faceImgLoader.GetImageWidth(0);
         
+        int originalNonFaceCount = nonFaceImages.size();
         ImageLoader nonFaceImgLoader;
         nonFaceImgLoader.LoadImages(nonFaceImages, ImageLoader::IT_Gray);
         nonFaceImgLoader.GenerateIntegralImage();
@@ -1513,11 +1515,12 @@ namespace MagicDIP
         srand(time(NULL)); //sample feature
 
         int curStageLevelCount = 8;
-        int levelCountDelta = 5;
+        int levelCountDelta = 5;  //modify_flag
         int maxStageLevelCount = 200;
         int restartLevelCount = 50;        
-        int maxTryNum = 6;
+        int maxTryNum = 1;  //modify_flag
         int maxPassNum = 2;
+        int nonFaceBreakCount = originalNonFaceCount * 0.01;  //modify_flag
         for (int stageId = 0; stageId < stageCount; stageId++)
         {
             if (curStageLevelCount == maxStageLevelCount)
@@ -1525,7 +1528,7 @@ namespace MagicDIP
                 curStageLevelCount = restartLevelCount + rand() % (maxStageLevelCount - restartLevelCount);
                 DebugLog << "Stage " << stageId << " restart level count: " << curStageLevelCount << std::endl;
             }
-            double acceptNonFaceDetectRate = 0.1;
+            double acceptNonFaceDetectRate = 0.1;  //modify_flag
             int tryNum = maxTryNum;
             int passNum = maxPassNum;
             bool isEmptyInput = false;
@@ -1535,7 +1538,7 @@ namespace MagicDIP
             while (true)
             {
                 DebugLog << "Stage " << stageId << " level count: " << curStageLevelCount << std::endl;
-                AdaBoostFaceDetection* pDetector = new AdaBoostFaceDetection;
+                AdaBoostFaceDetection* pDetector = new AdaBoostFaceDetection(0.999); //modify_flag
                 int res = pDetector->Learn(faceImgLoader, faceValidFlag, nonFaceImgLoader, nonFaceValidFlag, curStageLevelCount);
                 if (res != MAGIC_NO_ERROR)
                 {
@@ -1578,11 +1581,19 @@ namespace MagicDIP
                         }
                     }
                 }
-                double nonFaceDetectRate = double(nonFaceDetectIndex.size()) / (validNonFaceCount + 1.0);
+                if (validNonFaceCount < nonFaceBreakCount)
+                {
+                    isEmptyInput = true;
+                    delete pDetector;
+                    pDetector = NULL;
+                    break;
+                }
+                double nonFaceDetectRate = double(nonFaceDetectIndex.size()) / (validNonFaceCount + 0.1);
                 avgNonFaceDetectRate += nonFaceDetectRate;
                 detectRateTryNum++;
-                if (avgNonFaceDetectRate > acceptNonFaceDetectRate)
+                if (nonFaceDetectRate > acceptNonFaceDetectRate)
                 {
+                    mCascadedDetectors.push_back(pDetector);
                     for (int nonFaceDetectId = 0; nonFaceDetectId < nonFaceDetectIndex.size(); nonFaceDetectId++)
                     {
                         nonFaceValidFlag.at(nonFaceDetectIndex.at(nonFaceDetectId)) = 0;
@@ -1591,7 +1602,19 @@ namespace MagicDIP
                     {
                         faceValidFlag.at(faceDetectFalseIndex.at(faceFalseId)) = 0;
                     }
-                    mCascadedDetectors.push_back(pDetector);
+                    //output false face to local file
+                    for (int faceFalseId = 0; faceFalseId < faceDetectFalseIndex.size(); faceFalseId++)
+                    {
+                        cv::Mat falseFaceImg = cv::imread(faceImages.at(faceDetectFalseIndex.at(faceFalseId)));
+                        std::stringstream ss;
+                        ss << "./FalseFace/falseFace_" << stageId << "_" << faceFalseId << ".jpg";
+                        std::string outFalseFaceName;
+                        ss >> outFalseFaceName;
+                        ss.clear();
+                        cv::imwrite(outFalseFaceName, falseFaceImg);
+                        falseFaceImg.release();
+                    }
+                    //
                     break;
                 }
                 else
@@ -1628,7 +1651,7 @@ namespace MagicDIP
                             avgNonFaceDetectRate = 0;
                             detectRateTryNum = 0;
                             passNum = 0;
-                            tryNum = maxTryNum;
+                            tryNum = maxTryNum * maxPassNum;
                             DebugLog << "Stage: " << stageId << " finally decrease detect rate: " << acceptNonFaceDetectRate << std::endl;
                             continue;
                            /* for (int nonFaceDetectId = 0; nonFaceDetectId < nonFaceDetectIndex.size(); nonFaceDetectId++)
@@ -1656,6 +1679,45 @@ namespace MagicDIP
         {
             return MAGIC_INVALID_RESULT;
         }
+
+        //export valid face file
+        int finalValidId = 0;
+        for (int faceId = 0; faceId < faceValidFlag.size(); faceId++)
+        {
+            if (faceValidFlag.at(faceId))
+            {
+                cv::Mat finalValidFace = cv::imread(faceImages.at(faceId));
+                std::stringstream ss;
+                ss << "./ValidFace/validFace_" << finalValidId << ".jpg";
+                finalValidId++;
+                std::string validFaceName;
+                ss >> validFaceName;
+                ss.clear();
+                cv::imwrite(validFaceName, finalValidFace);
+                finalValidFace.release();
+            }
+        }
+        //
+        //output non-detect non-face to local file
+        for (int nonFaceId = 0; nonFaceId < nonFaceValidFlag.size(); nonFaceId++)
+        {
+            cv::Mat falseNonFaceImg = cv::imread(nonFaceImages.at(nonFaceId));
+            std::stringstream ss;
+            if (!nonFaceValidFlag.at(nonFaceId))
+            {
+                ss << "./ValidNonFace/validNonFace_" << nonFaceId << ".jpg";
+            }
+            else
+            {
+                ss << "./FalseNonFace/falseNonFace_" << nonFaceId << ".jpg";
+            }      
+            std::string outFalseNonFaceName;
+            ss >> outFalseNonFaceName;
+            ss.clear();
+            cv::imwrite(outFalseNonFaceName, falseNonFaceImg);
+            falseNonFaceImg.release();        
+        }
+        //
 
         //test
         int detectedFaceNum = 0;
