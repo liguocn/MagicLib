@@ -94,7 +94,7 @@ namespace
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol / 2 - 1);
             int negValue = ImgBoxValue(imgLoader, dataId, feature.sRow, feature.sCol + feature.lCol / 2,
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol - 1);
-            return (posValue - negValue) / (feature.lRow * feature.lCol / 2);
+            return (posValue - negValue) / (feature.lRow * feature.lCol);
         }
         else if (feature.type == 1)
         {
@@ -102,7 +102,7 @@ namespace
                 feature.sRow + feature.lRow / 2 - 1, feature.sCol + feature.lCol - 1);
             int posValue = ImgBoxValue(imgLoader, dataId, feature.sRow + feature.lRow / 2, feature.sCol,
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol - 1);
-            return (posValue - negValue) / (feature.lRow * feature.lCol / 2);
+            return (posValue - negValue) / (feature.lRow * feature.lCol);
         }
         else if (feature.type == 2)
         {
@@ -112,7 +112,7 @@ namespace
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol - 1);
             int negValue = ImgBoxValue(imgLoader, dataId, feature.sRow, feature.sCol + feature.lCol / 3,
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol * 2 / 3 - 1);
-            return (posLeftValue + posRightValue - negValue) / (feature.lRow * feature.lCol / 3);
+            return (posLeftValue + posRightValue - negValue * 2) / (feature.lRow * feature.lCol);
         }
         else if (feature.type == 3)
         {
@@ -124,7 +124,7 @@ namespace
                 feature.sRow + feature.lRow / 2 - 1, feature.sCol + feature.lCol - 1);
             int negLeftDown = ImgBoxValue(imgLoader, dataId, feature.sRow + feature.lRow / 2, feature.sCol, 
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol / 2 - 1);
-            return (posTopLeft + posRightDown - negRightTop - negLeftDown) / (feature.lRow * feature.lCol / 4);
+            return (posTopLeft + posRightDown - negRightTop - negLeftDown) / (feature.lRow * feature.lCol);
         }
         else
         {
@@ -186,7 +186,7 @@ namespace
                 sRowAbs + lRow - 1, sColAbs + lCol / 2 - 1);
             int negValue = ImgBoxValue(integralImg, imgW, sRowAbs, sColAbs + lCol / 2,
                 sRowAbs + lRow - 1, sColAbs + lCol - 1);
-            return int( (posValue - negValue) / (lRow * lCol / 2) * avgScale );
+            return int( (posValue - negValue) / (lRow * lCol) * avgScale );
         }
         else if (feature.type == 1)
         {
@@ -194,7 +194,7 @@ namespace
                 sRowAbs + lRow / 2 - 1, sColAbs + lCol - 1);
             int posValue = ImgBoxValue(integralImg, imgW, sRowAbs + lRow / 2, sColAbs,
                 sRowAbs + lRow - 1, sColAbs + lCol - 1);
-            return int( (posValue - negValue) / (lRow * lCol / 2) * avgScale );
+            return int( (posValue - negValue) / (lRow * lCol) * avgScale );
         }
         else if (feature.type == 2)
         {
@@ -204,7 +204,7 @@ namespace
                 sRowAbs + lRow - 1, sColAbs + lCol - 1);
             int negValue = ImgBoxValue(integralImg, imgW, sRowAbs, sColAbs + lCol / 3,
                 sRowAbs + lRow - 1, sColAbs + lCol * 2 / 3 - 1);
-            return int( (posLeftValue + posRightValue - negValue) / (lRow * lCol / 3) * avgScale );
+            return int( (posLeftValue + posRightValue - negValue * 2) / (lRow * lCol) * avgScale );
         }
         else if (feature.type == 3)
         {
@@ -216,7 +216,7 @@ namespace
                 sRowAbs + lRow / 2 - 1, sColAbs + lCol - 1);
             int negLeftDown = ImgBoxValue(integralImg, imgW, sRowAbs + lRow / 2, sColAbs, 
                 sRowAbs + lRow - 1, sColAbs + lCol / 2 - 1);
-            return int( (posTopLeft + posRightDown - negRightTop - negLeftDown) / (lRow * lCol / 4) * avgScale );
+            return int( (posTopLeft + posRightDown - negRightTop - negLeftDown) / (lRow * lCol) * avgScale );
         }
         else
         {
@@ -1515,12 +1515,12 @@ namespace MagicDIP
         srand(time(NULL)); //sample feature
 
         int curStageLevelCount = 8;
-        int levelCountDelta = 5;  //modify_flag
+        int levelCountDelta = 10;  //modify_flag
         int maxStageLevelCount = 200;
         int restartLevelCount = 50;        
         int maxTryNum = 1;  //modify_flag
-        int maxPassNum = 2;
-        int nonFaceBreakCount = originalNonFaceCount * 0.01;  //modify_flag
+        int maxPassNum = 3;
+        int nonFaceBreakCount = originalNonFaceCount * 0.005;  //modify_flag
         for (int stageId = 0; stageId < stageCount; stageId++)
         {
             if (curStageLevelCount == maxStageLevelCount)
@@ -1591,6 +1591,7 @@ namespace MagicDIP
                 double nonFaceDetectRate = double(nonFaceDetectIndex.size()) / (validNonFaceCount + 0.1);
                 avgNonFaceDetectRate += nonFaceDetectRate;
                 detectRateTryNum++;
+                DebugLog << "Stage: " << stageId << "  nonFaceDetectRate: " << nonFaceDetectRate << std::endl;
                 if (nonFaceDetectRate > acceptNonFaceDetectRate)
                 {
                     mCascadedDetectors.push_back(pDetector);
