@@ -2,6 +2,9 @@
 #ifdef PLATFORM_WIN
 #include <windows.h>
 #endif
+#ifdef PLATFORM_MAC
+#include <time.h>
+#endif
 
 namespace MagicTool
 {
@@ -30,6 +33,9 @@ namespace MagicTool
         __int64 counter = 0;
         QueryPerformanceCounter((LARGE_INTEGER*)&counter);
         curTime = (counter - start) / double(frequency);
+#endif
+#ifdef PLATFORM_MAC
+        curTime = static_cast<double>(time(NULL));
 #endif
         return curTime;
     }

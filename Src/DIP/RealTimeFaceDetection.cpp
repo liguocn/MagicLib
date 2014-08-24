@@ -302,7 +302,7 @@ namespace
         long long classifierCount = classifiers.size();
         try
         {
-            mpFeatureValues = new int[long long(mImageCount) * classifierCount];
+            mpFeatureValues = new int[static_cast<long long>(mImageCount) * classifierCount];
         }
         catch(const std::bad_alloc& e)
         {
@@ -335,11 +335,11 @@ namespace
     {
         if (mIndexMap.size() == 0)
         {
-            return mpFeatureValues[long long(classifierId) * mImageCount + long long(imgId)];
+            return mpFeatureValues[static_cast<long long>(classifierId) * mImageCount + static_cast<long long>(imgId)];
         }
         else
         {
-            return mpFeatureValues[ long long(classifierId) * mImageCount + long long(mIndexMap[imgId]) ];
+            return mpFeatureValues[ static_cast<long long>(classifierId) * mImageCount + static_cast<long long>(mIndexMap[imgId]) ];
         }
     }
 
@@ -922,7 +922,7 @@ namespace MagicDIP
         GenerateClassifierCadidates(faceImgLoader.GetImageWidth(0));
 
         //Generate Feature Value Cache
-        long long nonFaceCacheSize = long long(nonFaceCount) * mClassifierCandidates.size() * 4;
+        long long nonFaceCacheSize = static_cast<long long>(nonFaceCount) * mClassifierCandidates.size() * 4;
         DebugLog << "nonFaceCacheSize: " << nonFaceCacheSize << std::endl;
         GenerateFeatureValueCache(&faceImgLoader, faceIndex, &nonFaceImgLoader, nonFaceIndex);
 
@@ -1242,7 +1242,7 @@ namespace MagicDIP
             }
         }
         double sampleRate = 0.015;
-        //int imgId = 0;
+        int imgId = 0;
         int classifierId = 0;
         for (int typeId = 0; typeId < 4; typeId++)
         {
@@ -1252,13 +1252,14 @@ namespace MagicDIP
                 HaarClassifier* pClassifier = new HaarClassifier(classifierId, features.at(typeId).at(*itr));
                 classifierId++;
                 mClassifierCandidates.push_back(pClassifier);
-                /*std::stringstream ss;
-                ss << "./featureImg/feature_" << imgId << ".jpg";
+                
+                std::stringstream ss;
+                ss << "./FeatureCandidates/feature_" << imgId << ".jpg";
                 std::string imgName;
                 ss >> imgName;
                 ss.clear();
                 pClassifier->SaveFeatureAsImage(imgName, baseImgSize);
-                imgId++;*/
+                imgId++;
             }
         }
         
@@ -1489,7 +1490,7 @@ namespace MagicDIP
 
         Reset();
         //int stageCount = layerCounts.size();
-        int stageCount = 1000; //modify_flag
+        int stageCount = 50; //modify_flag
         mCascadedDetectors.reserve(stageCount);
 
         ImageLoader faceImgLoader;
@@ -1514,21 +1515,25 @@ namespace MagicDIP
         
         srand(time(NULL)); //sample feature
 
-        int curStageLevelCount = 8;
+        int curStageLevelCount = 100;
         int levelCountDelta = 10;  //modify_flag
         int maxStageLevelCount = 200;
         int restartLevelCount = 50;        
         int maxTryNum = 1;  //modify_flag
-        int maxPassNum = 3;
-        int nonFaceBreakCount = originalNonFaceCount * 0.005;  //modify_flag
+        int maxPassNum = 2; //modify_flag
+        int nonFaceBreakCount = originalNonFaceCount * 0.02;  //modify_flag
         for (int stageId = 0; stageId < stageCount; stageId++)
         {
+            //Save temp
+            std::string tempFileName("./temp.abfd");
+            Save(tempFileName);
+            //
             if (curStageLevelCount == maxStageLevelCount)
             {
                 curStageLevelCount = restartLevelCount + rand() % (maxStageLevelCount - restartLevelCount);
                 DebugLog << "Stage " << stageId << " restart level count: " << curStageLevelCount << std::endl;
             }
-            double acceptNonFaceDetectRate = 0.1;  //modify_flag
+            double acceptNonFaceDetectRate = 0.01;  //modify_flag
             int tryNum = maxTryNum;
             int passNum = maxPassNum;
             bool isEmptyInput = false;
@@ -1538,7 +1543,7 @@ namespace MagicDIP
             while (true)
             {
                 DebugLog << "Stage " << stageId << " level count: " << curStageLevelCount << std::endl;
-                AdaBoostFaceDetection* pDetector = new AdaBoostFaceDetection(0.999); //modify_flag
+                AdaBoostFaceDetection* pDetector = new AdaBoostFaceDetection(0.99); //modify_flag
                 int res = pDetector->Learn(faceImgLoader, faceValidFlag, nonFaceImgLoader, nonFaceValidFlag, curStageLevelCount);
                 if (res != MAGIC_NO_ERROR)
                 {
@@ -1595,6 +1600,7 @@ namespace MagicDIP
                 if (nonFaceDetectRate > acceptNonFaceDetectRate)
                 {
                     mCascadedDetectors.push_back(pDetector);
+                    pDetector->SaveFeatureAsImage("./Features/", mBaseImgSize, stageId);
                     for (int nonFaceDetectId = 0; nonFaceDetectId < nonFaceDetectIndex.size(); nonFaceDetectId++)
                     {
                         nonFaceValidFlag.at(nonFaceDetectIndex.at(nonFaceDetectId)) = 0;

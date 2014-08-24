@@ -226,6 +226,10 @@ namespace MagicApp
         {
             fin.getline(pLine, maxSize);
             std::string imgName(pLine);
+            if (!imgName.empty() && imgName[imgName.size() - 1] == '\r')
+            {
+                imgName.erase(imgName.size() - 1);
+            }
             imgNames.at(dataId) = imgPath + imgName;
         }
         fin.close();
