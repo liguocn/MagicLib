@@ -1242,7 +1242,7 @@ namespace MagicDIP
             }
         }
         double sampleRate = 0.015;
-        int imgId = 0;
+        //int imgId = 0;
         int classifierId = 0;
         for (int typeId = 0; typeId < 4; typeId++)
         {
@@ -1253,13 +1253,13 @@ namespace MagicDIP
                 classifierId++;
                 mClassifierCandidates.push_back(pClassifier);
                 
-                std::stringstream ss;
+                /*std::stringstream ss;
                 ss << "./FeatureCandidates/feature_" << imgId << ".jpg";
                 std::string imgName;
                 ss >> imgName;
                 ss.clear();
                 pClassifier->SaveFeatureAsImage(imgName, baseImgSize);
-                imgId++;
+                imgId++;*/
             }
         }
         
@@ -1471,7 +1471,7 @@ namespace MagicDIP
 
     RealTimeFaceDetection::RealTimeFaceDetection() : 
         mBaseImgSize(0),
-        mAvgImgGray(100),
+        mAvgImgGray(128),
         mCascadedDetectors()
     {
     }
@@ -1515,12 +1515,12 @@ namespace MagicDIP
         
         srand(time(NULL)); //sample feature
 
-        int curStageLevelCount = 100;
-        int levelCountDelta = 10;  //modify_flag
+        int curStageLevelCount = 8;
+        int levelCountDelta = 11;  //modify_flag
         int maxStageLevelCount = 200;
         int restartLevelCount = 50;        
         int maxTryNum = 1;  //modify_flag
-        int maxPassNum = 2; //modify_flag
+        int maxPassNum = 3; //modify_flag
         int nonFaceBreakCount = originalNonFaceCount * 0.02;  //modify_flag
         for (int stageId = 0; stageId < stageCount; stageId++)
         {
@@ -1528,12 +1528,12 @@ namespace MagicDIP
             std::string tempFileName("./temp.abfd");
             Save(tempFileName);
             //
-            if (curStageLevelCount == maxStageLevelCount)
+            if (curStageLevelCount == maxStageLevelCount || stageId >= 5) //modify_flag
             {
                 curStageLevelCount = restartLevelCount + rand() % (maxStageLevelCount - restartLevelCount);
-                DebugLog << "Stage " << stageId << " restart level count: " << curStageLevelCount << std::endl;
+                DebugLog << "Stage " << stageId << " random level count: " << curStageLevelCount << std::endl;
             }
-            double acceptNonFaceDetectRate = 0.01;  //modify_flag
+            double acceptNonFaceDetectRate = 0.15;  //modify_flag
             int tryNum = maxTryNum;
             int passNum = maxPassNum;
             bool isEmptyInput = false;
@@ -1543,7 +1543,7 @@ namespace MagicDIP
             while (true)
             {
                 DebugLog << "Stage " << stageId << " level count: " << curStageLevelCount << std::endl;
-                AdaBoostFaceDetection* pDetector = new AdaBoostFaceDetection(0.99); //modify_flag
+                AdaBoostFaceDetection* pDetector = new AdaBoostFaceDetection(0.999); //modify_flag
                 int res = pDetector->Learn(faceImgLoader, faceValidFlag, nonFaceImgLoader, nonFaceValidFlag, curStageLevelCount);
                 if (res != MAGIC_NO_ERROR)
                 {
@@ -1802,7 +1802,8 @@ namespace MagicDIP
             curStep = stepSize * curScale;
             //break;
         }
-        PostProcessFaces(faces);
+        //DebugLog << "  Post-Process faces: " << faces.size() / 4 << std::endl;
+        //PostProcessFaces(faces);
         return (faces.size() / 4);
     }
 

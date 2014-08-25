@@ -2,6 +2,7 @@
 #include "../DIP/RealTimeFaceDetection.h"
 #include "../Tool/ErrorCodes.h"
 #include "../Tool/LogSystem.h"
+#include "../Math/HomoMatrix3.h"
 #include <fstream>
 
 namespace
@@ -252,7 +253,7 @@ namespace MagicApp
         const int maxSize = 512;
         char pLine[maxSize];
         fin.getline(pLine, maxSize);
-        double avgGray = 100;
+        double avgGray = 128;
         for (int dataId = 0; dataId < dataSize; dataId++)
         {
             fin.getline(pLine, maxSize);
@@ -293,6 +294,7 @@ namespace MagicApp
 
     void FaceDetection::GenerateTrainingFacesFromLandFile(const std::string& fileName, const std::string& outputPath) 
     {
+        DebugLog << "GenerateTrainingFacesFromLandFile..." << std::endl;
         std::string imgPath = fileName;
         std::string::size_type pos = imgPath.rfind("/");
         if (pos == std::string::npos)
@@ -303,27 +305,24 @@ namespace MagicApp
         std::ifstream fin(fileName);
         int dataSize;
         fin >> dataSize;
+        std::vector<std::string> imgFileNames(dataSize);
+        std::vector<double> markList;
+        int markCount = 37;
         const int maxSize = 512;
         char pLine[maxSize];
         fin.getline(pLine, maxSize);
-        int marginSize = 1;
-        int outputSize = 32;
         for (int dataId = 0; dataId < dataSize; dataId++)
         {
             fin.getline(pLine, maxSize);
             std::string landName(pLine);
-            //landName = imgPath + landName;
             std::string imgName = imgPath + landName;
-            std::string posName = imgPath + landName;
+            //std::string posName = imgPath + landName;
             std::string::size_type pos = imgName.rfind(".");
             imgName.replace(pos, 5, ".jpg");
-            pos = posName.rfind(".");
-            posName.replace(pos, 5, ".pos");
-            std::string faceName;
-            std::stringstream ss;
-            ss << outputPath << dataId << ".jpg";
-            ss >> faceName;
-            ss.clear();
+            imgFileNames.at(dataId) = imgName;
+            //pos = posName.rfind(".");
+            //posName.replace(pos, 5, ".pos");
+            //posFileNames.at(dataId) = posName;
 
             cv::Mat grayImg = cv::imread(imgName);
             int imgH = grayImg.rows;
@@ -331,63 +330,164 @@ namespace MagicApp
 
             landName = imgPath + landName;
             std::ifstream landFin(landName);
-            int markCount;
-            landFin >> markCount;
-            int left = 1.0e10;
-            int right = 0;
-            int top = 1.0e10;
-            int down = 0;
-            for (int markId = 0; markId < markCount; markId++)
+            int nTemp;
+            landFin >> nTemp;
+            for (int markId = 0; markId < markCount * 2; markId++)
             {
                 double row, col;
                 landFin >> col >> row;
                 row = imgH - row;
-                if (row < top)
+                if (markId % 2 == 0)
                 {
-                    top = row;
-                }
-                if (row > down)
-                {
-                    down = row;
-                }
-                if (col < left)
-                {
-                    left = col;
-                }
-                if (col > right)
-                {
-                    right = col;
+                    markList.push_back(col);
+                    markList.push_back(row);
                 }
             }
             landFin.close();
-            int sRow = top - marginSize;
-            int sCol = left - marginSize;
-            int w = right - left;
-            int h = down - top;
-            int len = w > h ? w : h;
-            len += marginSize * 2;
+        }
+        fin.close();
 
-            std::ofstream posFout(posName);
-            posFout << sRow << " " << sCol << " " << len << std::endl;
-            posFout.close();
+        DebugLog << "Calculate mean marks" << std::endl;
+        //Calculate mean marks
+        int iterCount = 2;
+        std::vector<cv::Point2f> cvMeanMarks(markCount);
+        std::vector<cv::Point2f> cvSumMarks(markCount);
+        std::vector<cv::Point2f> cvCurMarks(markCount);
+        for (int iterIndex = 0; iterIndex < iterCount; iterIndex++)
+        {
+            if (iterIndex == 0)
+            {
+                for (int markId = 0; markId < markCount; markId++)
+                {
+                    cvMeanMarks.at(markId).x = markList.at(markId * 2);
+                    cvMeanMarks.at(markId).y = markList.at(markId * 2 + 1);
+                }
+            }
+            for (int markId = 0; markId < markCount; markId++)
+            {
+                cvSumMarks.at(markId).x = 0;
+                cvSumMarks.at(markId).y = 0;
+            }
+            int validSumNum = 0;
+            for (int dataId = 0; dataId < dataSize; dataId++)
+            {
+                int markBaseIndex = dataId * markCount * 2;
+                for (int markId = 0; markId < markCount; markId++)
+                {
+                    cvCurMarks.at(markId).x = markList.at(markBaseIndex + markId * 2);
+                    cvCurMarks.at(markId).y = markList.at(markBaseIndex + markId * 2 + 1);
+                }
+                cv::Mat transMat = cv::estimateRigidTransform(cvCurMarks, cvMeanMarks, false);
+                if (transMat.data == NULL)
+                {
+                    DebugLog << "    transMat.data == NULL: " << dataId << " " << iterIndex << std::endl;
+                    continue;
+                }
+                MagicMath::HomoMatrix3 homoMat;
+                homoMat.SetValue(0, 0, transMat.at<double>(0, 0));
+                homoMat.SetValue(0, 1, transMat.at<double>(0, 1));
+                homoMat.SetValue(0, 2, transMat.at<double>(0, 2));
+                homoMat.SetValue(1, 0, transMat.at<double>(1, 0));
+                homoMat.SetValue(1, 1, transMat.at<double>(1, 1));
+                homoMat.SetValue(1, 2, transMat.at<double>(1, 2));
+                for (int markId = 0; markId < markCount; markId++)
+                {
+                    double xRes, yRes;
+                    homoMat.TransformPoint(cvCurMarks.at(markId).x, cvCurMarks.at(markId).y, xRes, yRes);
+                    cvSumMarks.at(markId).x += xRes;
+                    cvSumMarks.at(markId).y += yRes;
+                }
+                validSumNum++;
+            }
+            for (int markId = 0; markId < markCount; markId++)
+            {
+                cvMeanMarks.at(markId).x = cvSumMarks.at(markId).x / validSumNum;
+                cvMeanMarks.at(markId).y = cvSumMarks.at(markId).y / validSumNum;
+            }
+        }
+
+        DebugLog << "Calculate mean face rectangle position" << std::endl; 
+        //Calculate mean face rectangle position
+        int left = 100000;
+        int right = -100000; 
+        int top = 100000;
+        int down = -100000;
+        for (int markId = 0; markId < markCount; markId++)
+        {
+            if (cvMeanMarks.at(markId).x > right)
+            {
+                right = cvMeanMarks.at(markId).x;
+            }
+            if (cvMeanMarks.at(markId).x < left)
+            {
+                left = cvMeanMarks.at(markId).x;
+            }
+            if (cvMeanMarks.at(markId).y > down)
+            {
+                down = cvMeanMarks.at(markId).y;
+            }
+            if (cvMeanMarks.at(markId).y < top)
+            {
+                top = cvMeanMarks.at(markId).y;
+            }
+        }
+        int xLen = right - left;
+        int yLen = down - top;
+        int len = xLen > yLen ? xLen : yLen;
+        len += 12; //margin size
+        int cenX = (left + right) / 2;
+        int cenY = (top + down) / 2;
+        left = cenX - len / 2;
+        top = cenY - len / 2;
+
+        DebugLog << "Align each face to mean face and extract it" << std::endl;
+        //Align each face to mean face and extract it
+        int outputSize = 128;
+        for (int dataId = 0; dataId < dataSize; dataId++)
+        {
+            int markBaseIndex = dataId * markCount * 2;
+            for (int markId = 0; markId < markCount; markId++)
+            {
+                cvCurMarks.at(markId).x = markList.at(markBaseIndex + markId * 2);
+                cvCurMarks.at(markId).y = markList.at(markBaseIndex + markId * 2 + 1);
+            }
+            cv::Mat transMat = cv::estimateRigidTransform(cvCurMarks, cvMeanMarks, false);
+            if (transMat.data == NULL)
+            {
+                DebugLog << "miss face: " << dataId << " : " << imgFileNames.at(dataId) << std::endl;
+                continue;
+            }
+            cv::Mat img = cv::imread(imgFileNames.at(dataId));
+            cv::Mat uniformImg(img.rows, img.cols, img.type());
+            cv::warpAffine(img, uniformImg, transMat, uniformImg.size());
+            img.release();
 
             cv::Mat cropImg(len, len, CV_8UC1);
             for (int hid = 0; hid < len; hid++)
             {
                 for (int wid = 0; wid < len; wid++)
                 {
-                    cropImg.ptr(hid, wid)[0] = grayImg.ptr(sRow + hid, sCol + wid)[0];
+                    cropImg.ptr(hid, wid)[0] = uniformImg.ptr(top + hid, left + wid)[0];
                 }
             }
+
             cv::Size cvOutputSize(outputSize, outputSize);
             cv::Mat outputImg(cvOutputSize, CV_8UC1);
             cv::resize(cropImg, outputImg, cvOutputSize);
-            cv::imwrite(faceName, outputImg);
             cropImg.release();
-            grayImg.release();
+
+            std::stringstream ss;
+            ss << outputPath << dataId << ".jpg";
+            std::string outputName;
+            ss >> outputName;
+            ss.clear();
+
+            cv::imwrite(outputName, outputImg);
+            //cv::imwrite(outputName, uniformImg);
             outputImg.release();
+            uniformImg.release();
         }
-        fin.close();
+        DebugLog << "Finished" << std::endl;
     }
 
     void FaceDetection::GenerateFalsePositivesFromLandFile(const std::string& fileName, const std::string& outputPath) const
@@ -561,7 +661,9 @@ namespace MagicApp
             cv::Mat grayImg;
             cv::cvtColor(imgOrigin, grayImg, CV_BGR2GRAY);
             std::vector<int> faces;
+            DebugLog << "Detect face id: " << imgId << std::endl;
             int detectNum = DetectFace(grayImg, faces);
+            DebugLog << "    detect number: " << detectNum << std::endl;
             grayImg.release();
             if (detectNum > 0)
             {
