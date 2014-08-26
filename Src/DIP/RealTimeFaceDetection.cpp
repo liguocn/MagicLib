@@ -86,15 +86,19 @@ namespace
         }
     }
 
-    static int CalFeatureValue(const MagicDIP::ImageLoader& imgLoader, int dataId, const MagicDIP::HaarFeature& feature)
+    static int CalFeatureValue(const MagicDIP::ImageLoader& imgLoader, int dataId, int boxSize, int avgImgGray, 
+        const MagicDIP::HaarFeature& feature)
     {
+        double localAvg = ImgBoxValue(imgLoader, dataId, 0, 0, boxSize - 1, boxSize - 1) / 
+            (double(boxSize * boxSize));
+        double avgScale = avgImgGray / (localAvg + 0.1);
         if (feature.type == 0)
         {
             int posValue = ImgBoxValue(imgLoader, dataId, feature.sRow, feature.sCol, 
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol / 2 - 1);
             int negValue = ImgBoxValue(imgLoader, dataId, feature.sRow, feature.sCol + feature.lCol / 2,
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol - 1);
-            return (posValue - negValue) / (feature.lRow * feature.lCol);
+            return int( (posValue - negValue) / (feature.lRow * feature.lCol) * avgScale );
         }
         else if (feature.type == 1)
         {
@@ -102,7 +106,7 @@ namespace
                 feature.sRow + feature.lRow / 2 - 1, feature.sCol + feature.lCol - 1);
             int posValue = ImgBoxValue(imgLoader, dataId, feature.sRow + feature.lRow / 2, feature.sCol,
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol - 1);
-            return (posValue - negValue) / (feature.lRow * feature.lCol);
+            return int( (posValue - negValue) / (feature.lRow * feature.lCol) * avgImgGray );
         }
         else if (feature.type == 2)
         {
@@ -112,7 +116,7 @@ namespace
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol - 1);
             int negValue = ImgBoxValue(imgLoader, dataId, feature.sRow, feature.sCol + feature.lCol / 3,
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol * 2 / 3 - 1);
-            return (posLeftValue + posRightValue - negValue * 2) / (feature.lRow * feature.lCol);
+            return int( (posLeftValue + posRightValue - negValue * 2) / (feature.lRow * feature.lCol) * avgImgGray);
         }
         else if (feature.type == 3)
         {
@@ -124,7 +128,7 @@ namespace
                 feature.sRow + feature.lRow / 2 - 1, feature.sCol + feature.lCol - 1);
             int negLeftDown = ImgBoxValue(imgLoader, dataId, feature.sRow + feature.lRow / 2, feature.sCol, 
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol / 2 - 1);
-            return (posTopLeft + posRightDown - negRightTop - negLeftDown) / (feature.lRow * feature.lCol);
+            return int( (posTopLeft + posRightDown - negRightTop - negLeftDown) / (feature.lRow * feature.lCol) * avgImgGray );
         }
         else
         {
@@ -234,7 +238,7 @@ namespace
         /*bool CalFeatureValues(const MagicDIP::ImageLoader& imgLoader, 
             const std::vector<MagicDIP::HaarClassifier*>& classifiers);*/
         bool CalFeatureValues(const MagicDIP::ImageLoader& imgLoader, const std::vector<int>& imgIndex, 
-            const std::vector<MagicDIP::HaarClassifier*>& classifiers);
+            const std::vector<MagicDIP::HaarClassifier*>& classifiers, int boxSize, int avgImgGray);
         int GetFeatureValue(int classifierId, int imgId);
 
     private:
@@ -291,7 +295,7 @@ namespace
     }*/
 
     bool FaceFeatureCache::CalFeatureValues(const MagicDIP::ImageLoader& imgLoader, const std::vector<int>& imgIndex, 
-            const std::vector<MagicDIP::HaarClassifier*>& classifiers)
+            const std::vector<MagicDIP::HaarClassifier*>& classifiers, int boxSize, int avgImgGray)
     {
         Reset();
         mImageCount = imgIndex.size();
@@ -325,7 +329,7 @@ namespace
             long long baseIndex = classifierId * mImageCount;
             for (long long imgId = 0; imgId < mImageCount; imgId++)
             {
-                mpFeatureValues[baseIndex + imgId] = CalFeatureValue(imgLoader, imgIndex.at(imgId), feature);
+                mpFeatureValues[baseIndex + imgId] = CalFeatureValue(imgLoader, imgIndex.at(imgId), boxSize, avgImgGray, feature);
             }
         }
         return true;
@@ -403,14 +407,14 @@ namespace MagicDIP
 
     int HaarClassifier::Learn(const ImageLoader& faceImgLoader, const std::vector<double>& faceDataWeights, 
         const std::vector<int>& faceIndex, const ImageLoader& nonFaceImgLoader, const std::vector<double>& nonFaceDataWeights, 
-        const std::vector<int>& nonFaceIndex, double* trainError)
+        const std::vector<int>& nonFaceIndex, double* trainError, int boxSize, int avgImgGray)
     {
         int faceDataCount = faceDataWeights.size();
         std::vector<ValueIndex> faceFeatures(faceDataCount);
         double faceSum = 0;
         for (int faceId = 0; faceId < faceDataCount; faceId++)
         {
-            faceFeatures.at(faceId).mValue = CalFeature(faceImgLoader, 1, faceIndex.at(faceId));
+            faceFeatures.at(faceId).mValue = CalFeature(faceImgLoader, 1, faceIndex.at(faceId), boxSize, avgImgGray);
             faceFeatures.at(faceId).mIndex = faceId;
             faceSum += faceDataWeights.at(faceId);
         }
@@ -421,7 +425,7 @@ namespace MagicDIP
         double nonFaceSum = 0;
         for (int nonFaceId = 0; nonFaceId < nonFaceDataCount; nonFaceId++)
         {
-            nonFaceFeatures.at(nonFaceId).mValue = CalFeature(nonFaceImgLoader, 0, nonFaceIndex.at(nonFaceId));
+            nonFaceFeatures.at(nonFaceId).mValue = CalFeature(nonFaceImgLoader, 0, nonFaceIndex.at(nonFaceId), boxSize, avgImgGray);
             nonFaceFeatures.at(nonFaceId).mIndex = nonFaceId;
             nonFaceSum += nonFaceDataWeights.at(nonFaceId);
         }
@@ -528,9 +532,9 @@ namespace MagicDIP
         }
     }
 
-    int HaarClassifier::Predict(const ImageLoader& imgLoader, int dataId) const
+    int HaarClassifier::Predict(const ImageLoader& imgLoader, int dataId, int boxSize, int avgImgGray) const
     {
-        int featureValue = CalFeatureValue(imgLoader, dataId, mFeature);
+        int featureValue = CalFeatureValue(imgLoader, dataId, boxSize, avgImgGray, mFeature);
         if (mIsLess)
         {
             return featureValue < mThreshold;
@@ -541,7 +545,7 @@ namespace MagicDIP
         }
     }
 
-    int HaarClassifier::CalFeature(const ImageLoader& imgLoader, int imgType, int dataId) const
+    int HaarClassifier::CalFeature(const ImageLoader& imgLoader, int imgType, int dataId, int boxSize, int avgImgGray) const
     {
         if (imgType == 1) //face
         {
@@ -551,7 +555,7 @@ namespace MagicDIP
             }
             else
             {
-                return CalFeatureValue(imgLoader, dataId, mFeature);
+                return CalFeatureValue(imgLoader, dataId, boxSize, avgImgGray, mFeature);
             }
         }
         else if (imgType == 0) //non face
@@ -562,7 +566,7 @@ namespace MagicDIP
             }
             else
             {
-                return CalFeatureValue(imgLoader, dataId, mFeature);
+                return CalFeatureValue(imgLoader, dataId, boxSize, avgImgGray, mFeature);
             }
         }
         else
@@ -883,7 +887,8 @@ namespace MagicDIP
     }
 
     int AdaBoostFaceDetection::Learn(const ImageLoader& faceImgLoader, const std::vector<bool>& faceValidFlag,
-        const ImageLoader& nonFaceImgLoader, const std::vector<bool>& nonFaceValidFlag, int levelCount)
+        const ImageLoader& nonFaceImgLoader, const std::vector<bool>& nonFaceValidFlag, int levelCount, 
+        int boxSize, int avgImgGray)
     {
         Reset();
         mClassifiers.reserve(levelCount);
@@ -924,7 +929,7 @@ namespace MagicDIP
         //Generate Feature Value Cache
         long long nonFaceCacheSize = static_cast<long long>(nonFaceCount) * mClassifierCandidates.size() * 4;
         DebugLog << "nonFaceCacheSize: " << nonFaceCacheSize << std::endl;
-        GenerateFeatureValueCache(&faceImgLoader, faceIndex, &nonFaceImgLoader, nonFaceIndex);
+        GenerateFeatureValueCache(&faceImgLoader, faceIndex, &nonFaceImgLoader, nonFaceIndex, boxSize, avgImgGray);
 
         std::vector<int> faceResFlag(faceCount);
         std::vector<int> nonFaceResFlag(nonFaceCount);
@@ -940,7 +945,7 @@ namespace MagicDIP
             double levelTime = MagicTool::Profiler::GetTime();
             DebugLog << " AdaBoost level: " << levelId << std::endl;
             int weakClassifierId = TrainWeakClassifier(faceImgLoader, faceWeights, faceIndex, nonFaceImgLoader, nonFaceWeights,
-                nonFaceIndex);
+                nonFaceIndex, boxSize, avgImgGray);
             HaarClassifier* pWeakClassifier = NULL;
             if (weakClassifierId != -1)
             {
@@ -967,7 +972,7 @@ namespace MagicDIP
             int detectedFaceNum = 0;
             for (int faceId = 0; faceId < faceCount; faceId++)
             {
-                faceResFlag.at(faceId) = abs(1 - pWeakClassifier->Predict(faceImgLoader, faceIndex.at(faceId)));
+                faceResFlag.at(faceId) = abs(1 - pWeakClassifier->Predict(faceImgLoader, faceIndex.at(faceId), boxSize, avgImgGray));
                 trainingError += faceWeights.at(faceId) * faceResFlag.at(faceId);
                 if (faceResFlag.at(faceId) == 0)
                 {
@@ -979,7 +984,7 @@ namespace MagicDIP
             int detectedNonFaceNum = 0;
             for (int nonFaceId = 0; nonFaceId < nonFaceCount; nonFaceId++)
             {
-                nonFaceResFlag.at(nonFaceId) = pWeakClassifier->Predict(nonFaceImgLoader, nonFaceIndex.at(nonFaceId));
+                nonFaceResFlag.at(nonFaceId) = pWeakClassifier->Predict(nonFaceImgLoader, nonFaceIndex.at(nonFaceId), boxSize, avgImgGray);
                 trainingError += nonFaceWeights.at(nonFaceId) * nonFaceResFlag.at(nonFaceId);
                 if (nonFaceResFlag.at(nonFaceId) == 0)
                 {
@@ -1042,7 +1047,7 @@ namespace MagicDIP
             double res = 0.0;
             for (int cid = 0; cid < mClassifiers.size(); cid++)
             {
-                res += mClassifiers.at(cid)->Predict(faceImgLoader, faceIndex.at(faceId)) * mClassifierWeights.at(cid);
+                res += mClassifiers.at(cid)->Predict(faceImgLoader, faceIndex.at(faceId), boxSize, avgImgGray) * mClassifierWeights.at(cid);
             }
             faceDetectValues.at(faceId) = res;
         }
@@ -1077,13 +1082,13 @@ namespace MagicDIP
         }
     }
 
-    int AdaBoostFaceDetection::Predict(const ImageLoader& imgLoader, int dataId) const
+    int AdaBoostFaceDetection::Predict(const ImageLoader& imgLoader, int dataId, int boxSize, int avgImgGray) const
     {
         double res = 0.0;
         int classifierCount = mClassifierWeights.size();
         for (int cid = 0; cid < classifierCount; cid++)
         {
-            res += mClassifiers.at(cid)->Predict(imgLoader, dataId) * mClassifierWeights.at(cid);
+            res += mClassifiers.at(cid)->Predict(imgLoader, dataId, boxSize, avgImgGray) * mClassifierWeights.at(cid);
         }
         if (res > mThreshold)
         {
@@ -1241,7 +1246,7 @@ namespace MagicDIP
                 }
             }
         }
-        double sampleRate = 0.015;
+        double sampleRate = 0.02;
         //int imgId = 0;
         int classifierId = 0;
         for (int typeId = 0; typeId < 4; typeId++)
@@ -1267,7 +1272,7 @@ namespace MagicDIP
     }
 
     void AdaBoostFaceDetection::GenerateFeatureValueCache(const ImageLoader* pFaceImgLoader, const std::vector<int>& faceIndex,
-        const ImageLoader* pNonFaceImgLoader, const std::vector<int>& nonFaceIndex) const
+        const ImageLoader* pNonFaceImgLoader, const std::vector<int>& nonFaceIndex, int boxSize, int avgImgGray) const
     {
         if (pFaceImgLoader != NULL)
         {
@@ -1277,7 +1282,7 @@ namespace MagicDIP
                 gFaceFeatureCache = NULL;
             }
             gFaceFeatureCache = new FaceFeatureCache;
-            bool res = gFaceFeatureCache->CalFeatureValues(*pFaceImgLoader, faceIndex, mClassifierCandidates);
+            bool res = gFaceFeatureCache->CalFeatureValues(*pFaceImgLoader, faceIndex, mClassifierCandidates, boxSize, avgImgGray);
             if (res)
             {
                 DebugLog << "face feature cache is success" << std::endl;
@@ -1298,7 +1303,7 @@ namespace MagicDIP
                 gNonFaceFeatureCache = NULL;
             }
             gNonFaceFeatureCache = new FaceFeatureCache;
-            bool res = gNonFaceFeatureCache->CalFeatureValues(*pNonFaceImgLoader, nonFaceIndex, mClassifierCandidates);
+            bool res = gNonFaceFeatureCache->CalFeatureValues(*pNonFaceImgLoader, nonFaceIndex, mClassifierCandidates, boxSize, avgImgGray);
             if (res)
             {
                 DebugLog << "nonface feature cache is success" << std::endl;
@@ -1418,7 +1423,8 @@ namespace MagicDIP
 
     int AdaBoostFaceDetection::TrainWeakClassifier(const ImageLoader& faceImgLoader, const std::vector<double>& faceDataWeights, 
         const std::vector<int>& faceIndex, const ImageLoader& nonFaceImgLoader, 
-        const std::vector<double>& nonFaceDataWeights, const std::vector<int>& nonFaceIndex)
+        const std::vector<double>& nonFaceDataWeights, const std::vector<int>& nonFaceIndex,
+        int boxSize, int avgImgGray)
     {
         double minTrainError = 1.0e308;
         int classifierId = -1;
@@ -1428,7 +1434,8 @@ namespace MagicDIP
             if (pClassifier != NULL)
             {
                 double trainError;
-                int res = pClassifier->Learn(faceImgLoader, faceDataWeights, faceIndex, nonFaceImgLoader, nonFaceDataWeights, nonFaceIndex, &trainError);
+                int res = pClassifier->Learn(faceImgLoader, faceDataWeights, faceIndex, nonFaceImgLoader, 
+                    nonFaceDataWeights, nonFaceIndex, &trainError, boxSize, avgImgGray);
                 if (res != MAGIC_NO_ERROR)
                 {
                     DebugLog << "HaarClassifier training failed" << std::endl;
@@ -1521,7 +1528,8 @@ namespace MagicDIP
         int restartLevelCount = 50;        
         int maxTryNum = 1;  //modify_flag
         int maxPassNum = 3; //modify_flag
-        int nonFaceBreakCount = originalNonFaceCount * 0.02;  //modify_flag
+        int nonFaceBreakCount = originalNonFaceCount * 0.003;  //modify_flag
+        int nonFaceExportCount = originalNonFaceCount * 0.2;  //modify_flag
         for (int stageId = 0; stageId < stageCount; stageId++)
         {
             //Save temp
@@ -1544,7 +1552,8 @@ namespace MagicDIP
             {
                 DebugLog << "Stage " << stageId << " level count: " << curStageLevelCount << std::endl;
                 AdaBoostFaceDetection* pDetector = new AdaBoostFaceDetection(0.999); //modify_flag
-                int res = pDetector->Learn(faceImgLoader, faceValidFlag, nonFaceImgLoader, nonFaceValidFlag, curStageLevelCount);
+                int res = pDetector->Learn(faceImgLoader, faceValidFlag, nonFaceImgLoader, nonFaceValidFlag, 
+                    curStageLevelCount, mBaseImgSize, mAvgImgGray);
                 if (res != MAGIC_NO_ERROR)
                 {
                     if (res == MAGIC_EMPTY_INPUT)
@@ -1566,7 +1575,7 @@ namespace MagicDIP
                 {
                     if (faceValidFlag.at(faceId))
                     {
-                        if (pDetector->Predict(faceImgLoader, faceId) == 0)
+                        if (pDetector->Predict(faceImgLoader, faceId, mBaseImgSize, mAvgImgGray) == 0)
                         {
                             faceDetectFalseIndex.push_back(faceId);
                         }
@@ -1580,12 +1589,36 @@ namespace MagicDIP
                     if (nonFaceValidFlag.at(nonFaceId))
                     {
                         validNonFaceCount++;
-                        if (pDetector->Predict(nonFaceImgLoader, nonFaceId) == 0)
+                        if (pDetector->Predict(nonFaceImgLoader, nonFaceId, mBaseImgSize, mAvgImgGray) == 0)
                         {
                             nonFaceDetectIndex.push_back(nonFaceId);
                         }
                     }
                 }
+                //output non-detect non-face to local file
+                if (validNonFaceCount < nonFaceExportCount)
+                {
+                    for (int nonFaceId = 0; nonFaceId < nonFaceValidFlag.size(); nonFaceId++)
+                    {
+                        cv::Mat falseNonFaceImg = cv::imread(nonFaceImages.at(nonFaceId));
+                        std::stringstream ss;
+                        if (!nonFaceValidFlag.at(nonFaceId))
+                        {
+                            ss << "./ValidNonFace/validNonFace_" << nonFaceId << ".jpg";
+                        }
+                        else
+                        {
+                            ss << "./FalseNonFace/falseNonFace_" << nonFaceId << ".jpg";
+                        }      
+                        std::string outFalseNonFaceName;
+                        ss >> outFalseNonFaceName;
+                        ss.clear();
+                        cv::imwrite(outFalseNonFaceName, falseNonFaceImg);
+                        falseNonFaceImg.release();        
+                    }
+                    nonFaceExportCount = 0;
+                }
+                //
                 if (validNonFaceCount < nonFaceBreakCount)
                 {
                     isEmptyInput = true;
@@ -1703,26 +1736,6 @@ namespace MagicDIP
                 cv::imwrite(validFaceName, finalValidFace);
                 finalValidFace.release();
             }
-        }
-        //
-        //output non-detect non-face to local file
-        for (int nonFaceId = 0; nonFaceId < nonFaceValidFlag.size(); nonFaceId++)
-        {
-            cv::Mat falseNonFaceImg = cv::imread(nonFaceImages.at(nonFaceId));
-            std::stringstream ss;
-            if (!nonFaceValidFlag.at(nonFaceId))
-            {
-                ss << "./ValidNonFace/validNonFace_" << nonFaceId << ".jpg";
-            }
-            else
-            {
-                ss << "./FalseNonFace/falseNonFace_" << nonFaceId << ".jpg";
-            }      
-            std::string outFalseNonFaceName;
-            ss >> outFalseNonFaceName;
-            ss.clear();
-            cv::imwrite(outFalseNonFaceName, falseNonFaceImg);
-            falseNonFaceImg.release();        
         }
         //
 

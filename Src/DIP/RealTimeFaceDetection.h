@@ -29,10 +29,10 @@ namespace MagicDIP
         bool IsLess(void) const;
         int Learn(const ImageLoader& faceImgLoader, const std::vector<double>& faceDataWeights, const std::vector<int>& faceIndex, 
             const ImageLoader& nonFaceImgLoader, const std::vector<double>& nonFaceDataWeights, const std::vector<int>& nonFaceIndex, 
-            double* trainError);
+            double* trainError, int boxSize, int avgImgGray);
         int Predict(const std::vector<unsigned int>& integralImg, int imgW, 
             int sRow, int sCol, int boxSize, float scale, int avgImgGray) const;
-        int Predict(const ImageLoader& imgLoader, int dataId) const;
+        int Predict(const ImageLoader& imgLoader, int dataId, int boxSize, int avgImgGray) const;
         void Save(std::ofstream& fout) const;
         void Load(std::ifstream& fin);
         double CalFeatureSimilarity(const HaarFeature& hf) const;
@@ -45,7 +45,7 @@ namespace MagicDIP
         int ImgBoxValue(const std::vector<unsigned int>& integralImg, int imgW, int sRow, int sCol, int eRow, int eCol) const;
         unsigned int GetIntegralValue(const std::vector<unsigned int>& integralImg, int imgW, int hid, int wid) const;*/
         //imgType: 0-non face, 1-face
-        int CalFeature(const ImageLoader& imgLoader, int imgType, int dataId) const;
+        int CalFeature(const ImageLoader& imgLoader, int imgType, int dataId, int boxSize, int avgImgGray) const;
 
     private:
         int mId;
@@ -63,10 +63,10 @@ namespace MagicDIP
 
         int Learn(const ImageLoader& faceImgLoader, const std::vector<bool>& faceValidFlag,
             const ImageLoader& nonFaceImgLoader, const std::vector<bool>& nonFaceValidFlag,
-            int levelCount);
+            int levelCount, int boxSize, int avgImgGray);
         int Predict(const std::vector<unsigned int>& integralImg, int imgW, 
             int sRow, int sCol, int boxSize, double scale, int avgImgGray) const;
-        int Predict(const ImageLoader& imgLoader, int dataId) const;
+        int Predict(const ImageLoader& imgLoader, int dataId, int boxSize, int avgImgGray) const;
         void Save(std::ofstream& fout) const;
         void Load(std::ifstream& fin);
         void SaveFeatureAsImage(const std::string& filePath, int baseSize, int detectorId) const;
@@ -75,14 +75,14 @@ namespace MagicDIP
         void GenerateClassifierCadidates(int baseImgSize);
         std::vector<int> SampleHaarFeatures(const std::vector<HaarFeature> features, double sampleRate) const;
         void GenerateFeatureValueCache(const ImageLoader* pFaceImgLoader, const std::vector<int>& faceIndex,
-            const ImageLoader* pNonFaceImgLoader, const std::vector<int>& nonFaceIndex) const;
+            const ImageLoader* pNonFaceImgLoader, const std::vector<int>& nonFaceIndex, int boxSize, int avgImgGray) const;
         void ClearFeatureValueCache(void) const;
         int RemoveSimilarClassifierCandidates(const HaarFeature& hf);
         void ClearClassifierCadidates(void);
         int TrainWeakClassifier(const ImageLoader& faceImgLoader, const std::vector<double>& faceDataWeights, 
             const std::vector<int>& faceIndex,
             const ImageLoader& nonFaceImgLoader, const std::vector<double>& nonFaceDataWeights, 
-            const std::vector<int>& nonFaceIndex);
+            const std::vector<int>& nonFaceIndex, int boxSize, int avgImgGray);
         void Reset(void);
 
     private:

@@ -536,7 +536,7 @@ namespace MagicApp
 
             std::vector<int> faces;
             int detectNum = DetectFace(halfImg, faces);
-            for (int detectId = 0; detectId < detectNum; detectId++)
+            for (int detectId = 0; detectId < detectNum; detectId += detectNum / 300) //modify_flag
             {
                 int detectBase = detectId * 4;
                 int detectRow = faces.at(detectBase);
