@@ -92,13 +92,15 @@ namespace
         double localAvg = ImgBoxValue(imgLoader, dataId, 0, 0, boxSize - 1, boxSize - 1) / 
             (double(boxSize * boxSize));
         double avgScale = avgImgGray / (localAvg + 0.1);
+       // DebugLog << "localAvg: " << localAvg << " avgScale" << avgScale << std::endl;
         if (feature.type == 0)
         {
             int posValue = ImgBoxValue(imgLoader, dataId, feature.sRow, feature.sCol, 
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol / 2 - 1);
             int negValue = ImgBoxValue(imgLoader, dataId, feature.sRow, feature.sCol + feature.lCol / 2,
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol - 1);
-            return int( (posValue - negValue) / (feature.lRow * feature.lCol) * avgScale );
+            int difRes = (posValue - negValue) * avgScale / (feature.lRow * feature.lCol);
+            return difRes;
         }
         else if (feature.type == 1)
         {
@@ -106,7 +108,8 @@ namespace
                 feature.sRow + feature.lRow / 2 - 1, feature.sCol + feature.lCol - 1);
             int posValue = ImgBoxValue(imgLoader, dataId, feature.sRow + feature.lRow / 2, feature.sCol,
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol - 1);
-            return int( (posValue - negValue) / (feature.lRow * feature.lCol) * avgImgGray );
+            int difRes = (posValue - negValue) * avgScale / (feature.lRow * feature.lCol);
+            return difRes;
         }
         else if (feature.type == 2)
         {
@@ -116,7 +119,8 @@ namespace
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol - 1);
             int negValue = ImgBoxValue(imgLoader, dataId, feature.sRow, feature.sCol + feature.lCol / 3,
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol * 2 / 3 - 1);
-            return int( (posLeftValue + posRightValue - negValue * 2) / (feature.lRow * feature.lCol) * avgImgGray);
+            int difRes = (posLeftValue + posRightValue - negValue * 2) * avgScale / (feature.lRow * feature.lCol);
+            return difRes;
         }
         else if (feature.type == 3)
         {
@@ -128,7 +132,8 @@ namespace
                 feature.sRow + feature.lRow / 2 - 1, feature.sCol + feature.lCol - 1);
             int negLeftDown = ImgBoxValue(imgLoader, dataId, feature.sRow + feature.lRow / 2, feature.sCol, 
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol / 2 - 1);
-            return int( (posTopLeft + posRightDown - negRightTop - negLeftDown) / (feature.lRow * feature.lCol) * avgImgGray );
+            int difRes = (posTopLeft + posRightDown - negRightTop - negLeftDown) * avgScale / (feature.lRow * feature.lCol);
+            return difRes;
         }
         else
         {
@@ -144,6 +149,52 @@ namespace
         wid = wid >= imgW ? (imgW - 1) : wid;
 
         return integralImg.at(hid * imgW + wid);
+    }
+
+    static void CheckIntegralImage(const std::vector<unsigned int>& integralImg, const cv::Mat& img)
+    {
+        //DebugLog << "CheckIntegralImage" << std::endl;
+        int imgH = img.rows;
+        int imgW = img.cols;
+        for (int hid = 0; hid < imgH; hid++)
+        {
+            for (int wid = 0; wid < imgW; wid++)
+            {
+                unsigned char gray = img.ptr(hid, wid)[0];
+                int integralValue = 0;
+                if (hid > 0 && wid > 0)
+                {
+                    integralValue = GetIntegralValue(integralImg, imgW, hid, wid) + GetIntegralValue(integralImg, imgW, hid - 1, wid - 1) -
+                        GetIntegralValue(integralImg, imgW, hid - 1, wid) - GetIntegralValue(integralImg, imgW, hid, wid - 1);
+                }
+                else if (hid > 0 && wid == 0)
+                {
+                    integralValue = GetIntegralValue(integralImg, imgW, hid, wid) - GetIntegralValue(integralImg, imgW, hid - 1, wid);
+                }
+                else if (hid == 0 && wid > 0)
+                {
+                    integralValue = GetIntegralValue(integralImg, imgW, hid, wid) - GetIntegralValue(integralImg, imgW, hid, wid - 1);
+                }
+                else if (hid == 0 && wid == 0)
+                {
+                    integralValue = GetIntegralValue(integralImg, imgW, hid, wid);
+                }
+                else 
+                {
+                    DebugLog << "index error: " << hid << " " << wid << std::endl; 
+                }
+                int difV = gray - integralValue;
+                if (difV != 0)
+                {
+                    DebugLog << "error: " << difV << " gray: " << int(gray) << " integral: " << integralValue << std::endl;
+                }
+                /*else
+                {
+                    DebugLog << "image" << imgId << ": dif: " << difV << " gray: " << int(gray) << " integral: " << integralValue <<
+                        " " << hid << " " << wid << std::endl;
+                }*/
+            }
+        }
     }
 
     static int ImgBoxValue(const std::vector<unsigned int>& integralImg, int imgW, int sRow, int sCol, int eRow, int eCol)
@@ -175,6 +226,7 @@ namespace
     static int CalFeatureValue(const std::vector<unsigned int>& integralImg, int imgW, 
         int sRow, int sCol, int boxSize, float scale, int avgImgGray, const MagicDIP::HaarFeature& feature)
     {
+        //DebugLog << "boxsize check: " << boxSize << " " << 32 * scale << std::endl;
         int lRow = floor(feature.lRow * scale + 0.5);
         int lCol = floor(feature.lCol * scale + 0.5);
         int sRowAbs = floor(feature.sRow * scale + 0.5) + sRow;
@@ -190,7 +242,8 @@ namespace
                 sRowAbs + lRow - 1, sColAbs + lCol / 2 - 1);
             int negValue = ImgBoxValue(integralImg, imgW, sRowAbs, sColAbs + lCol / 2,
                 sRowAbs + lRow - 1, sColAbs + lCol - 1);
-            return int( (posValue - negValue) / (lRow * lCol) * avgScale );
+            int difRes = (posValue - negValue) * avgScale / (lRow * lCol);
+            return difRes;
         }
         else if (feature.type == 1)
         {
@@ -198,7 +251,8 @@ namespace
                 sRowAbs + lRow / 2 - 1, sColAbs + lCol - 1);
             int posValue = ImgBoxValue(integralImg, imgW, sRowAbs + lRow / 2, sColAbs,
                 sRowAbs + lRow - 1, sColAbs + lCol - 1);
-            return int( (posValue - negValue) / (lRow * lCol) * avgScale );
+            int difRes = (posValue - negValue) * avgScale / (lRow * lCol);
+            return difRes;
         }
         else if (feature.type == 2)
         {
@@ -208,7 +262,8 @@ namespace
                 sRowAbs + lRow - 1, sColAbs + lCol - 1);
             int negValue = ImgBoxValue(integralImg, imgW, sRowAbs, sColAbs + lCol / 3,
                 sRowAbs + lRow - 1, sColAbs + lCol * 2 / 3 - 1);
-            return int( (posLeftValue + posRightValue - negValue * 2) / (lRow * lCol) * avgScale );
+            int difRes = (posLeftValue + posRightValue - negValue * 2) * avgScale / (lRow * lCol);
+            return difRes;
         }
         else if (feature.type == 3)
         {
@@ -220,7 +275,8 @@ namespace
                 sRowAbs + lRow / 2 - 1, sColAbs + lCol - 1);
             int negLeftDown = ImgBoxValue(integralImg, imgW, sRowAbs + lRow / 2, sColAbs, 
                 sRowAbs + lRow - 1, sColAbs + lCol / 2 - 1);
-            return int( (posTopLeft + posRightDown - negRightTop - negLeftDown) / (lRow * lCol) * avgScale );
+            int difRes = (posTopLeft + posRightDown - negRightTop - negLeftDown) * avgScale / (lRow * lCol);
+            return difRes;
         }
         else
         {
@@ -521,7 +577,7 @@ namespace MagicDIP
     int HaarClassifier::Predict(const std::vector<unsigned int>& integralImg, int imgW,
         int sRow, int sCol, int boxSize, float scale, int avgImgGray) const
     {
-        int featureValue = CalFeatureValue(integralImg, imgW, sRow, sCol, boxSize, scale, avgImgGray, mFeature);
+        int featureValue = CalFeatureValue(integralImg, imgW, sRow, sCol, boxSize, scale, avgImgGray, mFeature);     
         if (mIsLess)
         {
             return featureValue < mThreshold;
@@ -1070,7 +1126,8 @@ namespace MagicDIP
         int classifierCount = mClassifierWeights.size();
         for (int cid = 0; cid < classifierCount; cid++)
         {
-            res += mClassifiers.at(cid)->Predict(integralImg, imgW, sRow, sCol, boxSize, scale, avgImgGray) * mClassifierWeights.at(cid);
+            int predictRes = mClassifiers.at(cid)->Predict(integralImg, imgW, sRow, sCol, boxSize, scale, avgImgGray);
+            res += predictRes * mClassifierWeights.at(cid);           
         }
         if (res > mThreshold)
         {
@@ -1088,7 +1145,8 @@ namespace MagicDIP
         int classifierCount = mClassifierWeights.size();
         for (int cid = 0; cid < classifierCount; cid++)
         {
-            res += mClassifiers.at(cid)->Predict(imgLoader, dataId, boxSize, avgImgGray) * mClassifierWeights.at(cid);
+            int predictRes = mClassifiers.at(cid)->Predict(imgLoader, dataId, boxSize, avgImgGray);
+            res += predictRes * mClassifierWeights.at(cid);
         }
         if (res > mThreshold)
         {
@@ -1274,6 +1332,7 @@ namespace MagicDIP
     void AdaBoostFaceDetection::GenerateFeatureValueCache(const ImageLoader* pFaceImgLoader, const std::vector<int>& faceIndex,
         const ImageLoader* pNonFaceImgLoader, const std::vector<int>& nonFaceIndex, int boxSize, int avgImgGray) const
     {
+        DebugLog << "GenerateFeatureValueCache: boxSize: " << boxSize << " avgImgGray: " << avgImgGray << std::endl; 
         if (pFaceImgLoader != NULL)
         {
             if (gFaceFeatureCache != NULL)
@@ -1503,6 +1562,7 @@ namespace MagicDIP
         ImageLoader faceImgLoader;
         faceImgLoader.LoadImages(faceImages, ImageLoader::IT_Gray);
         faceImgLoader.GenerateIntegralImage();
+        faceImgLoader.TestIntegralImage();
         faceImgLoader.ClearImageData();
         DebugLog << "face loaded" << std::endl;
 
@@ -1512,6 +1572,7 @@ namespace MagicDIP
         ImageLoader nonFaceImgLoader;
         nonFaceImgLoader.LoadImages(nonFaceImages, ImageLoader::IT_Gray);
         nonFaceImgLoader.GenerateIntegralImage();
+        nonFaceImgLoader.TestIntegralImage();
         nonFaceImgLoader.ClearImageData();
         DebugLog << "non face loaded" << std::endl;
         
@@ -1528,7 +1589,7 @@ namespace MagicDIP
         int restartLevelCount = 50;        
         int maxTryNum = 1;  //modify_flag
         int maxPassNum = 3; //modify_flag
-        int nonFaceBreakCount = originalNonFaceCount * 0.003;  //modify_flag
+        int nonFaceBreakCount = originalNonFaceCount * 0.001;  //modify_flag
         int nonFaceExportCount = originalNonFaceCount * 0.2;  //modify_flag
         for (int stageId = 0; stageId < stageCount; stageId++)
         {
@@ -1570,17 +1631,6 @@ namespace MagicDIP
             
                 //filter non faces
                 //int nonFaceDetectCount = 0;
-                std::vector<int> faceDetectFalseIndex;
-                for (int faceId = 0; faceId < faceValidFlag.size(); faceId++)
-                {
-                    if (faceValidFlag.at(faceId))
-                    {
-                        if (pDetector->Predict(faceImgLoader, faceId, mBaseImgSize, mAvgImgGray) == 0)
-                        {
-                            faceDetectFalseIndex.push_back(faceId);
-                        }
-                    }
-                }
 
                 std::vector<int> nonFaceDetectIndex;
                 int validNonFaceCount = 0;
@@ -1637,6 +1687,18 @@ namespace MagicDIP
                     for (int nonFaceDetectId = 0; nonFaceDetectId < nonFaceDetectIndex.size(); nonFaceDetectId++)
                     {
                         nonFaceValidFlag.at(nonFaceDetectIndex.at(nonFaceDetectId)) = 0;
+                    }
+                    //update face
+                    std::vector<int> faceDetectFalseIndex;
+                    for (int faceId = 0; faceId < faceValidFlag.size(); faceId++)
+                    {
+                        if (faceValidFlag.at(faceId))
+                        {
+                            if (pDetector->Predict(faceImgLoader, faceId, mBaseImgSize, mAvgImgGray) == 0)
+                            {
+                                faceDetectFalseIndex.push_back(faceId);
+                            }
+                        }
                     }
                     for (int faceFalseId = 0; faceFalseId < faceDetectFalseIndex.size(); faceFalseId++)
                     {
@@ -1790,6 +1852,7 @@ namespace MagicDIP
         int imgW = img.cols;
         std::vector<unsigned int> integralImg;
         ImageLoader::TransferToIntegralImg(img, integralImg);
+        //CheckIntegralImage(integralImg, img);
         int maxSubH = imgH;
         int maxSubW = imgW;
         while (curSubImgSize <= maxSubH && curSubImgSize <= maxSubW)

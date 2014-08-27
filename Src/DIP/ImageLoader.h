@@ -29,6 +29,7 @@ namespace MagicDIP
         void ClearIntegralImageData(void);
         void Reset(void);
         
+        void TestIntegralImage(void);
 
         static void TransferToIntegralImg(const cv::Mat& img, std::vector<unsigned int>& integralImg);
 

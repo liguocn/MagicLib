@@ -116,6 +116,55 @@ namespace MagicDIP
         }
     }
 
+    void ImageLoader::TestIntegralImage(void)
+    {
+        DebugLog << "TestIntegralImage: " << mImageCount << std::endl;
+        for (int imgId = 0; imgId < mImageCount; imgId++)
+        {
+            int imgH = GetImageHeight(imgId);
+            int imgW = GetImageWidth(imgId);
+            for (int hid = 0; hid < imgH; hid++)
+            {
+                for (int wid = 0; wid < imgW; wid++)
+                {
+                    unsigned char gray = GetGrayImageValue(imgId, hid, wid);
+                    int integralValue = 0;
+                    if (hid > 0 && wid > 0)
+                    {
+                        integralValue = GetIntegralValue(imgId, hid, wid) + GetIntegralValue(imgId, hid - 1, wid - 1) -
+                            GetIntegralValue(imgId, hid - 1, wid) - GetIntegralValue(imgId, hid, wid - 1);
+                    }
+                    else if (hid > 0 && wid == 0)
+                    {
+                        integralValue = GetIntegralValue(imgId, hid, wid) - GetIntegralValue(imgId, hid - 1, wid);
+                    }
+                    else if (hid == 0 && wid > 0)
+                    {
+                        integralValue = GetIntegralValue(imgId, hid, wid) - GetIntegralValue(imgId, hid, wid - 1);
+                    }
+                    else if (hid == 0 && wid == 0)
+                    {
+                        integralValue = GetIntegralValue(imgId, hid, wid);
+                    }
+                    else 
+                    {
+                        DebugLog << "index error: " << hid << " " << wid << std::endl; 
+                    }
+                    int difV = gray - integralValue;
+                    if (difV != 0)
+                    {
+                        DebugLog << "error: " << difV << " gray: " << int(gray) << " integral: " << integralValue << std::endl;
+                    }
+                    /*else
+                    {
+                        DebugLog << "image" << imgId << ": dif: " << difV << " gray: " << int(gray) << " integral: " << integralValue <<
+                            " " << hid << " " << wid << std::endl;
+                    }*/
+                }
+            }
+        }
+    }
+
     const unsigned char* ImageLoader::GetImage(int imgId) const
     {
         return mImages.at(imgId);
