@@ -536,12 +536,13 @@ namespace MagicApp
 
             std::vector<int> faces;
             int detectNum = DetectFace(halfImg, faces);
-            for (int detectId = 0; detectId < detectNum; detectId += detectNum / 300) //modify_flag
+            for (int detectId = 0; detectId < detectNum; detectId++) //modify_flag
             {
                 int detectBase = detectId * 4;
                 int detectRow = faces.at(detectBase);
                 int detectCol = faces.at(detectBase + 1);
                 int detectLen = faces.at(detectBase + 2);
+
                 if (CalculateOverlapRate(faceRow, faceCol, faceLen, detectRow, detectCol, detectLen) < maxOverlapRate)
                 {
                     cv::Mat detectImg(detectLen, detectLen, CV_8UC1);
@@ -552,6 +553,38 @@ namespace MagicApp
                             detectImg.ptr(hid, wid)[0] = halfImg.ptr(detectRow + hid, detectCol + wid)[0];
                         }
                     }
+
+                    //std::stringstream ss;
+                    //ss << outputPath << outputId << ".jpg";
+                    //std::string outputImgName;
+                    //ss >> outputImgName;
+                    //outputId++;
+                    //cv::imwrite(outputImgName, detectImg);
+                    ////detectImg.release();
+
+                    //std::vector<int> subFaces;
+                    ////cv::Mat newDetectImg = cv::imread(outputImgName);
+                    //cv::Mat newDetectImg = detectImg.clone();
+                    //detectImg.release();
+                    //cv::Size cvOutputSize(outputSize, outputSize);
+                    //cv::Mat outputImg(cvOutputSize, CV_8UC1);
+                    //cv::resize(newDetectImg, outputImg, cvOutputSize);
+                    //newDetectImg.release();
+                    //int subRes = DetectFace(outputImg, subFaces);
+                    //if (subRes == 0)
+                    //{
+                    //    MagicTool::gLogOut = true;
+                    //    DebugLog << "compare: " << std::endl;
+                    //    DebugLog << "++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
+                    //    subRes = mpRealTimeDetector->DetectSpecialLocation(halfImg, detectRow, detectCol, detectLen, 1.5625, subFaces);
+                    //    DebugLog << "subRes: " << subRes << std::endl;
+                    //    DebugLog << "--------------------------------------------" << std::endl;
+                    //    subRes = DetectFace(outputImg, subFaces);
+                    //    DebugLog << "subRes: " << subRes << std::endl;
+                    //    MagicTool::gLogOut = false;
+                    //}
+                    //outputImg.release();
+
                     cv::Size cvOutputSize(outputSize, outputSize);
                     cv::Mat outputImg(cvOutputSize, CV_8UC1);
                     cv::resize(detectImg, outputImg, cvOutputSize);
@@ -662,9 +695,14 @@ namespace MagicApp
             cv::cvtColor(imgOrigin, grayImg, CV_BGR2GRAY);
             std::vector<int> faces;
             DebugLog << "Detect face id: " << imgId << std::endl;
-            int detectNum = DetectFace(grayImg, faces);
+            //int detectNum = DetectFace(grayImg, faces);
+            int detectNum = DetectFace(imgOrigin, faces);
             DebugLog << "    detect number: " << detectNum << std::endl;
             grayImg.release();
+            if (detectNum == 0)
+            {
+                DetectFace(imgOrigin, faces);
+            }
             if (detectNum > 0)
             {
                 std::vector<double> marks;

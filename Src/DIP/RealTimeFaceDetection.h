@@ -102,6 +102,7 @@ namespace MagicDIP
 
         int Learn(const std::vector<std::string>& faceImages, const std::vector<std::string>& nonFaceImages);
         int Detect(const cv::Mat& img, std::vector<int>& faces) const;
+        int DetectSpecialLocation(const cv::Mat& img, int rid, int cid, int subSize, double scale, std::vector<int>& faces) const;
         void Save(const std::string& fileName) const;
         void Load(const std::string& fileName);
         void SaveFeatureAsImage(const std::string& filePath) const;

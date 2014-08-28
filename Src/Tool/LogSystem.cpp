@@ -27,5 +27,7 @@ namespace MagicTool
     {
         return mOFStream;
     }
+
+    bool gLogOut = false;
 }
 

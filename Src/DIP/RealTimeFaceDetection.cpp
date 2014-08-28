@@ -13,12 +13,12 @@ namespace
     {
     public:
         ValueIndex();
-        ValueIndex(int value, int index);
+        ValueIndex(double value, int index);
         ~ValueIndex();
         bool operator < (const ValueIndex &vi) const;
 
     public:
-        int mValue;
+        double mValue;
         int mIndex;
     };
 
@@ -28,7 +28,7 @@ namespace
     {
     }
 
-    ValueIndex::ValueIndex(int value, int index) :
+    ValueIndex::ValueIndex(double value, int index) :
         mValue(value),
         mIndex(index)
     {
@@ -86,7 +86,7 @@ namespace
         }
     }
 
-    static int CalFeatureValue(const MagicDIP::ImageLoader& imgLoader, int dataId, int boxSize, int avgImgGray, 
+    static double CalFeatureValue(const MagicDIP::ImageLoader& imgLoader, int dataId, int boxSize, int avgImgGray, 
         const MagicDIP::HaarFeature& feature)
     {
         double localAvg = ImgBoxValue(imgLoader, dataId, 0, 0, boxSize - 1, boxSize - 1) / 
@@ -99,7 +99,7 @@ namespace
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol / 2 - 1);
             int negValue = ImgBoxValue(imgLoader, dataId, feature.sRow, feature.sCol + feature.lCol / 2,
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol - 1);
-            int difRes = (posValue - negValue) * avgScale / (feature.lRow * feature.lCol);
+            double difRes = double(posValue - negValue) * avgScale / (feature.lRow * feature.lCol);
             return difRes;
         }
         else if (feature.type == 1)
@@ -108,7 +108,7 @@ namespace
                 feature.sRow + feature.lRow / 2 - 1, feature.sCol + feature.lCol - 1);
             int posValue = ImgBoxValue(imgLoader, dataId, feature.sRow + feature.lRow / 2, feature.sCol,
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol - 1);
-            int difRes = (posValue - negValue) * avgScale / (feature.lRow * feature.lCol);
+            double difRes = double(posValue - negValue) * avgScale / (feature.lRow * feature.lCol);
             return difRes;
         }
         else if (feature.type == 2)
@@ -119,7 +119,7 @@ namespace
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol - 1);
             int negValue = ImgBoxValue(imgLoader, dataId, feature.sRow, feature.sCol + feature.lCol / 3,
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol * 2 / 3 - 1);
-            int difRes = (posLeftValue + posRightValue - negValue * 2) * avgScale / (feature.lRow * feature.lCol);
+            double difRes = double(posLeftValue + posRightValue - negValue * 2) * avgScale / (feature.lRow * feature.lCol);
             return difRes;
         }
         else if (feature.type == 3)
@@ -132,7 +132,7 @@ namespace
                 feature.sRow + feature.lRow / 2 - 1, feature.sCol + feature.lCol - 1);
             int negLeftDown = ImgBoxValue(imgLoader, dataId, feature.sRow + feature.lRow / 2, feature.sCol, 
                 feature.sRow + feature.lRow - 1, feature.sCol + feature.lCol / 2 - 1);
-            int difRes = (posTopLeft + posRightDown - negRightTop - negLeftDown) * avgScale / (feature.lRow * feature.lCol);
+            double difRes = double(posTopLeft + posRightDown - negRightTop - negLeftDown) * avgScale / (feature.lRow * feature.lCol);
             return difRes;
         }
         else
@@ -223,10 +223,9 @@ namespace
         }
     }
 
-    static int CalFeatureValue(const std::vector<unsigned int>& integralImg, int imgW, 
+    static double CalFeatureValue(const std::vector<unsigned int>& integralImg, int imgW, 
         int sRow, int sCol, int boxSize, float scale, int avgImgGray, const MagicDIP::HaarFeature& feature)
     {
-        //DebugLog << "boxsize check: " << boxSize << " " << 32 * scale << std::endl;
         int lRow = floor(feature.lRow * scale + 0.5);
         int lCol = floor(feature.lCol * scale + 0.5);
         int sRowAbs = floor(feature.sRow * scale + 0.5) + sRow;
@@ -234,15 +233,22 @@ namespace
         double localAvg = ImgBoxValue(integralImg, imgW, sRow, sCol, sRow + boxSize - 1, sCol + boxSize - 1) / 
             (double(boxSize * boxSize));
         double avgScale = avgImgGray / (localAvg + 0.1);
-        //double avgScale = 1.0;
-        //DebugLog << "localScale: " << avgScale << " localAvg: " << localAvg << std::endl;
+        /*if (MagicTool::gLogOut)
+        {
+            DebugLog << "     Cal HaarFeature: " << imgW << " lrow: " << lRow << " lcol: " << lCol << " " << boxSize << " " << scale
+                << " " << avgImgGray << " flrow: " << feature.lRow << " flcol: " << feature.lCol << std::endl;
+        }*/
         if (feature.type == 0)
         {
             int posValue = ImgBoxValue(integralImg, imgW, sRowAbs, sColAbs, 
                 sRowAbs + lRow - 1, sColAbs + lCol / 2 - 1);
             int negValue = ImgBoxValue(integralImg, imgW, sRowAbs, sColAbs + lCol / 2,
                 sRowAbs + lRow - 1, sColAbs + lCol - 1);
-            int difRes = (posValue - negValue) * avgScale / (lRow * lCol);
+            double difRes = double(posValue - negValue) * avgScale / (lRow * lCol);
+            /*if (MagicTool::gLogOut)
+            {
+                DebugLog << "     type0: " << difRes << " "  << posValue / scale / scale << " " << negValue / scale / scale << " " << avgScale << std::endl;
+            }*/
             return difRes;
         }
         else if (feature.type == 1)
@@ -251,7 +257,11 @@ namespace
                 sRowAbs + lRow / 2 - 1, sColAbs + lCol - 1);
             int posValue = ImgBoxValue(integralImg, imgW, sRowAbs + lRow / 2, sColAbs,
                 sRowAbs + lRow - 1, sColAbs + lCol - 1);
-            int difRes = (posValue - negValue) * avgScale / (lRow * lCol);
+            double difRes = double(posValue - negValue) * avgScale / (lRow * lCol);
+            /*if (MagicTool::gLogOut)
+            {
+                DebugLog << "     type1: " << difRes << " " << posValue / scale / scale << " " << negValue / scale / scale << " " << avgScale << std::endl;
+            }*/
             return difRes;
         }
         else if (feature.type == 2)
@@ -262,7 +272,12 @@ namespace
                 sRowAbs + lRow - 1, sColAbs + lCol - 1);
             int negValue = ImgBoxValue(integralImg, imgW, sRowAbs, sColAbs + lCol / 3,
                 sRowAbs + lRow - 1, sColAbs + lCol * 2 / 3 - 1);
-            int difRes = (posLeftValue + posRightValue - negValue * 2) * avgScale / (lRow * lCol);
+            double difRes = double(posLeftValue + posRightValue - negValue * 2) * avgScale / (lRow * lCol);
+            /*if (MagicTool::gLogOut)
+            {
+                DebugLog << "     type2: " << difRes << " " << posLeftValue / scale / scale << " " << posRightValue / scale / scale
+                    << " " << negValue / scale / scale << " " << avgScale << std::endl;
+            }*/
             return difRes;
         }
         else if (feature.type == 3)
@@ -275,7 +290,12 @@ namespace
                 sRowAbs + lRow / 2 - 1, sColAbs + lCol - 1);
             int negLeftDown = ImgBoxValue(integralImg, imgW, sRowAbs + lRow / 2, sColAbs, 
                 sRowAbs + lRow - 1, sColAbs + lCol / 2 - 1);
-            int difRes = (posTopLeft + posRightDown - negRightTop - negLeftDown) * avgScale / (lRow * lCol);
+            double difRes = double(posTopLeft + posRightDown - negRightTop - negLeftDown) * avgScale / (lRow * lCol);
+            /*if (MagicTool::gLogOut)
+            {
+                DebugLog << "     type3: " << difRes << " " << posTopLeft / scale / scale << " " << posRightDown / scale / scale << " "
+                    << negRightTop / scale / scale << " " << negLeftDown / scale / scale << " " << avgScale << std::endl;
+            }*/
             return difRes;
         }
         else
@@ -295,13 +315,13 @@ namespace
             const std::vector<MagicDIP::HaarClassifier*>& classifiers);*/
         bool CalFeatureValues(const MagicDIP::ImageLoader& imgLoader, const std::vector<int>& imgIndex, 
             const std::vector<MagicDIP::HaarClassifier*>& classifiers, int boxSize, int avgImgGray);
-        int GetFeatureValue(int classifierId, int imgId);
+        float GetFeatureValue(int classifierId, int imgId);
 
     private:
         void Reset(void);
 
     private:
-        int* mpFeatureValues;
+        float* mpFeatureValues;  //in order to save space, we use float here
         int mImageCount;
         //std::map<int, int> mIndexMap;
         std::vector<int> mIndexMap;
@@ -362,7 +382,7 @@ namespace
         long long classifierCount = classifiers.size();
         try
         {
-            mpFeatureValues = new int[static_cast<long long>(mImageCount) * classifierCount];
+            mpFeatureValues = new float[static_cast<long long>(mImageCount) * classifierCount];
         }
         catch(const std::bad_alloc& e)
         {
@@ -391,7 +411,7 @@ namespace
         return true;
     }
 
-    int FaceFeatureCache::GetFeatureValue(int classifierId, int imgId)
+    float FaceFeatureCache::GetFeatureValue(int classifierId, int imgId)
     {
         if (mIndexMap.size() == 0)
         {
@@ -492,13 +512,14 @@ namespace MagicDIP
         double faceAccumulate = 0;
         int nonFaceId = 0;
         double nonFaceAccumulate = 0;
+        double epsilon = 1.0e-6;
         while (faceId < faceDataCount || nonFaceId < nonFaceDataCount)
         {
-            int threshold;
+            double threshold;
             if (faceId == faceDataCount)
             {
-                threshold = nonFaceFeatures.at(nonFaceId).mValue;
-                while (nonFaceFeatures.at(nonFaceId).mValue == threshold)
+                threshold = nonFaceFeatures.at(nonFaceId).mValue + epsilon;
+                while (nonFaceFeatures.at(nonFaceId).mValue < threshold)
                 {
                     nonFaceAccumulate += nonFaceDataWeights.at(nonFaceFeatures.at(nonFaceId).mIndex);
                     nonFaceId++;
@@ -510,8 +531,8 @@ namespace MagicDIP
             }
             else if (nonFaceId == nonFaceDataCount)
             {
-                threshold = faceFeatures.at(faceId).mValue;
-                while (threshold == faceFeatures.at(faceId).mValue)
+                threshold = faceFeatures.at(faceId).mValue + epsilon;
+                while (faceFeatures.at(faceId).mValue < threshold)
                 {
                     faceAccumulate += faceDataWeights.at(faceFeatures.at(faceId).mIndex);
                     faceId++;
@@ -525,8 +546,8 @@ namespace MagicDIP
             {
                 if (faceFeatures.at(faceId).mValue < nonFaceFeatures.at(nonFaceId).mValue)
                 {
-                    threshold = faceFeatures.at(faceId).mValue;
-                    while (threshold == faceFeatures.at(faceId).mValue)
+                    threshold = faceFeatures.at(faceId).mValue + epsilon;
+                    while (faceFeatures.at(faceId).mValue < threshold)
                     {
                         faceAccumulate += faceDataWeights.at(faceFeatures.at(faceId).mIndex);
                         faceId++;
@@ -538,8 +559,8 @@ namespace MagicDIP
                 }
                 else
                 {
-                    threshold = nonFaceFeatures.at(nonFaceId).mValue;
-                    while (nonFaceFeatures.at(nonFaceId).mValue == threshold)
+                    threshold = nonFaceFeatures.at(nonFaceId).mValue + epsilon;
+                    while (nonFaceFeatures.at(nonFaceId).mValue < threshold)
                     {
                         nonFaceAccumulate += nonFaceDataWeights.at(nonFaceFeatures.at(nonFaceId).mIndex);
                         nonFaceId++;
@@ -555,14 +576,14 @@ namespace MagicDIP
             if (lessError < minError)
             {
                 minError = lessError;
-                mThreshold = threshold + 0.25;
+                mThreshold = threshold;
                 mIsLess = true;
             }
             double largeError = faceAccumulate + nonFaceSum - nonFaceAccumulate;
             if (largeError < minError)
             {
                 minError = largeError;
-                mThreshold = threshold + 0.25;
+                mThreshold = threshold;
                 mIsLess = false;
             }
         } 
@@ -577,7 +598,12 @@ namespace MagicDIP
     int HaarClassifier::Predict(const std::vector<unsigned int>& integralImg, int imgW,
         int sRow, int sCol, int boxSize, float scale, int avgImgGray) const
     {
-        int featureValue = CalFeatureValue(integralImg, imgW, sRow, sCol, boxSize, scale, avgImgGray, mFeature);     
+        double featureValue = CalFeatureValue(integralImg, imgW, sRow, sCol, boxSize, scale, avgImgGray, mFeature);    
+        /*if (MagicTool::gLogOut)
+        {
+            DebugLog << "   Haar predict: feature value " << featureValue << " isLess: " << mIsLess << " mThreahold: " 
+                << mThreshold << std::endl;
+        }*/
         if (mIsLess)
         {
             return featureValue < mThreshold;
@@ -590,7 +616,7 @@ namespace MagicDIP
 
     int HaarClassifier::Predict(const ImageLoader& imgLoader, int dataId, int boxSize, int avgImgGray) const
     {
-        int featureValue = CalFeatureValue(imgLoader, dataId, boxSize, avgImgGray, mFeature);
+        double featureValue = CalFeatureValue(imgLoader, dataId, boxSize, avgImgGray, mFeature);
         if (mIsLess)
         {
             return featureValue < mThreshold;
@@ -1127,8 +1153,16 @@ namespace MagicDIP
         for (int cid = 0; cid < classifierCount; cid++)
         {
             int predictRes = mClassifiers.at(cid)->Predict(integralImg, imgW, sRow, sCol, boxSize, scale, avgImgGray);
+            /*if (MagicTool::gLogOut)
+            {
+                DebugLog << "  weak: " << cid << " predictRes: " << predictRes << " w: " << mClassifierWeights.at(cid) << std::endl;
+            }*/
             res += predictRes * mClassifierWeights.at(cid);           
         }
+        /*if (MagicTool::gLogOut)
+        {
+            DebugLog << " boost res: " << res << " mThreshold: " << mThreshold << std::endl;
+        }*/
         if (res > mThreshold)
         {
             return 1;
@@ -1260,6 +1294,7 @@ namespace MagicDIP
     void AdaBoostFaceDetection::GenerateClassifierCadidates(int baseImgSize)
     {
         std::vector<std::vector<HaarFeature> > features(4);
+        int minLen = 3;  //modify_flag
         for (int sRow = 0; sRow < baseImgSize; sRow += 1)
         {
             for (int sCol = 0; sCol < baseImgSize; sCol += 1)
@@ -1267,36 +1302,36 @@ namespace MagicDIP
                 int colMaxLen = baseImgSize - sCol;
                 int rowMaxLen = baseImgSize - sRow;
 
-                for (int lRow = 1; lRow <= rowMaxLen; lRow += 1)
+                for (int lRow = minLen; lRow <= rowMaxLen; lRow += 1)
                 {
-                    for (int lCol = 2; lCol <= colMaxLen; lCol += 2)
+                    for (int lCol = minLen * 2; lCol <= colMaxLen; lCol += 2)
                     {
                         HaarFeature feature = {sRow, sCol, lRow, lCol, 0};
                         features.at(0).push_back(feature);
                     }
                 }
 
-                for (int lRow = 2; lRow <= rowMaxLen; lRow += 2)
+                for (int lRow = minLen * 2; lRow <= rowMaxLen; lRow += 2)
                 {
-                    for (int lCol = 1; lCol <= colMaxLen; lCol += 1)
+                    for (int lCol = minLen; lCol <= colMaxLen; lCol += 1)
                     {
                         HaarFeature feature = {sRow, sCol, lRow, lCol, 1};
                         features.at(1).push_back(feature);
                     }
                 }
 
-                for (int lRow = 1; lRow <= rowMaxLen; lRow += 1)
+                for (int lRow = minLen; lRow <= rowMaxLen; lRow += 1)
                 {
-                    for (int lCol = 3; lCol <= colMaxLen; lCol += 3)
+                    for (int lCol = minLen * 3; lCol <= colMaxLen; lCol += 3)
                     {
                         HaarFeature feature = {sRow, sCol, lRow, lCol, 2};
                         features.at(2).push_back(feature);
                     }
                 }
 
-                for (int lRow = 2; lRow <= rowMaxLen; lRow += 2)
+                for (int lRow = minLen * 2; lRow <= rowMaxLen; lRow += 2)
                 {
-                    for (int lCol = 2; lCol <= colMaxLen; lCol += 2)
+                    for (int lCol = minLen * 2; lCol <= colMaxLen; lCol += 2)
                     {
                         HaarFeature feature = {sRow, sCol, lRow, lCol, 3};
                         features.at(3).push_back(feature);
@@ -1304,7 +1339,7 @@ namespace MagicDIP
                 }
             }
         }
-        double sampleRate = 0.02;
+        double sampleRate = 0.035;
         //int imgId = 0;
         int classifierId = 0;
         for (int typeId = 0; typeId < 4; typeId++)
@@ -1507,6 +1542,7 @@ namespace MagicDIP
                 }
             }
         }
+        DebugLog << "  Min train error: " << minTrainError << std::endl;
         return classifierId;
     }
 
@@ -1597,7 +1633,7 @@ namespace MagicDIP
             std::string tempFileName("./temp.abfd");
             Save(tempFileName);
             //
-            if (curStageLevelCount == maxStageLevelCount || stageId >= 5) //modify_flag
+            if (curStageLevelCount == maxStageLevelCount || stageId >= 3) //modify_flag
             {
                 curStageLevelCount = restartLevelCount + rand() % (maxStageLevelCount - restartLevelCount);
                 DebugLog << "Stage " << stageId << " random level count: " << curStageLevelCount << std::endl;
@@ -1883,6 +1919,16 @@ namespace MagicDIP
         return (faces.size() / 4);
     }
 
+    int RealTimeFaceDetection::DetectSpecialLocation(const cv::Mat& img, int rid, int cid, int subSize, double scale, std::vector<int>& faces) const
+    {
+        faces.clear();
+        int imgW = img.cols;
+        std::vector<unsigned int> integralImg;
+        ImageLoader::TransferToIntegralImg(img, integralImg);
+        int res = DetectOneFace(integralImg, imgW, rid, cid, subSize, scale, mAvgImgGray);
+        return res;
+    }
+
     void RealTimeFaceDetection::Save(const std::string& fileName) const
     {
         std::ofstream fout(fileName);
@@ -1921,12 +1967,20 @@ namespace MagicDIP
     int RealTimeFaceDetection::DetectOneFace(const std::vector<unsigned int>& integralImg, int imgW, 
         int sRow, int sCol, int boxSize, double scale, int avgImgGray) const
     {
+        /*if (MagicTool::gLogOut)
+        {
+            DebugLog << "DetectOneFace: " << imgW << " " << sRow << " " << sCol << " " << boxSize << " " << scale << " " << avgImgGray << std::endl;
+        }*/
         if (mCascadedDetectors.size() == 0)
         {
             return 0;
         }
         for (std::vector<AdaBoostFaceDetection*>::const_iterator itr = mCascadedDetectors.begin(); itr != mCascadedDetectors.end(); itr++)
         {
+            /*if (MagicTool::gLogOut)
+            {
+                DebugLog << "AdaBoost level: " << itr - mCascadedDetectors.begin() << std::endl;
+            }*/
             if ( (*itr)->Predict(integralImg, imgW, sRow, sCol, boxSize, scale, avgImgGray) == 0 )
             {
                 return 0;

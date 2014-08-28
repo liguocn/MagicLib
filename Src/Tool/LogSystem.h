@@ -35,4 +35,6 @@ namespace MagicTool
     public:
         std::ofstream mOFStream;
     };
+
+    extern bool gLogOut;
 }
