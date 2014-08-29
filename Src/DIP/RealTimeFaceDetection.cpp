@@ -1312,7 +1312,7 @@ namespace MagicDIP
     void AdaBoostFaceDetection::GenerateClassifierCadidates(int baseImgSize)
     {
         std::vector<std::vector<HaarFeature> > features(4);
-        int minLen = 3;  //modify_flag
+        int minLen = 5;  //modify_flag
         for (int sRow = 0; sRow < baseImgSize; sRow += 1)
         {
             for (int sCol = 0; sCol < baseImgSize; sCol += 1)
@@ -1357,7 +1357,7 @@ namespace MagicDIP
                 }
             }
         }
-        double sampleRate = 0.035;
+        double sampleRate = 0.05;
         //int imgId = 0;
         int classifierId = 0;
         for (int typeId = 0; typeId < 4; typeId++)
@@ -1499,7 +1499,7 @@ namespace MagicDIP
 
     int AdaBoostFaceDetection::RemoveSimilarClassifierCandidates(const HaarFeature& hf)
     {
-        double similarThreshold = 0.24;
+        double similarThreshold = 0.7;
         int validCandCount = 0;
         for (std::vector<HaarClassifier*>::iterator itr = mClassifierCandidates.begin(); itr != mClassifierCandidates.end(); itr++)
         {
