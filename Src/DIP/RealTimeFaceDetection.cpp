@@ -512,7 +512,7 @@ namespace MagicDIP
         double faceAccumulate = 0;
         int nonFaceId = 0;
         double nonFaceAccumulate = 0;
-        double epsilon = 1.0e-6;
+        double epsilon = 1.0e-5;
         while (faceId < faceDataCount || nonFaceId < nonFaceDataCount)
         {
             double threshold;
@@ -546,7 +546,7 @@ namespace MagicDIP
             {
                 if (faceFeatures.at(faceId).mValue < nonFaceFeatures.at(nonFaceId).mValue)
                 {
-                    threshold = faceFeatures.at(faceId).mValue + epsilon;
+                    threshold = faceFeatures.at(faceId).mValue + epsilon;     
                     while (faceFeatures.at(faceId).mValue < threshold)
                     {
                         faceAccumulate += faceDataWeights.at(faceFeatures.at(faceId).mIndex);
@@ -556,10 +556,28 @@ namespace MagicDIP
                             break;
                         }
                     }
+                    while (nonFaceFeatures.at(nonFaceId).mValue < threshold)
+                    {
+                        nonFaceAccumulate += nonFaceDataWeights.at(nonFaceFeatures.at(nonFaceId).mIndex);
+                        nonFaceId++;
+                        if (nonFaceId == nonFaceDataCount)
+                        {
+                            break;
+                        }
+                    }
                 }
                 else
                 {
                     threshold = nonFaceFeatures.at(nonFaceId).mValue + epsilon;
+                    while (faceFeatures.at(faceId).mValue < threshold)
+                    {
+                        faceAccumulate += faceDataWeights.at(faceFeatures.at(faceId).mIndex);
+                        faceId++;
+                        if (faceId == faceDataCount)
+                        {
+                            break;
+                        }
+                    }
                     while (nonFaceFeatures.at(nonFaceId).mValue < threshold)
                     {
                         nonFaceAccumulate += nonFaceDataWeights.at(nonFaceFeatures.at(nonFaceId).mIndex);
@@ -610,7 +628,7 @@ namespace MagicDIP
         }
         else
         {
-            return featureValue > mThreshold;
+            return featureValue >= mThreshold;
         }
     }
 
@@ -623,7 +641,7 @@ namespace MagicDIP
         }
         else
         {
-            return featureValue > mThreshold;
+            return featureValue >= mThreshold;
         }
     }
 
@@ -1633,7 +1651,7 @@ namespace MagicDIP
             std::string tempFileName("./temp.abfd");
             Save(tempFileName);
             //
-            if (curStageLevelCount == maxStageLevelCount || stageId >= 3) //modify_flag
+            if (curStageLevelCount == maxStageLevelCount || stageId >= 5) //modify_flag
             {
                 curStageLevelCount = restartLevelCount + rand() % (maxStageLevelCount - restartLevelCount);
                 DebugLog << "Stage " << stageId << " random level count: " << curStageLevelCount << std::endl;
