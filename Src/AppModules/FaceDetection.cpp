@@ -695,14 +695,9 @@ namespace MagicApp
             cv::cvtColor(imgOrigin, grayImg, CV_BGR2GRAY);
             std::vector<int> faces;
             DebugLog << "Detect face id: " << imgId << std::endl;
-            //int detectNum = DetectFace(grayImg, faces);
-            int detectNum = DetectFace(imgOrigin, faces);
+            int detectNum = DetectFace(grayImg, faces);
             DebugLog << "    detect number: " << detectNum << std::endl;
             grayImg.release();
-            if (detectNum == 0)
-            {
-                DetectFace(imgOrigin, faces);
-            }
             if (detectNum > 0)
             {
                 std::vector<double> marks;

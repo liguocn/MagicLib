@@ -1312,7 +1312,7 @@ namespace MagicDIP
     void AdaBoostFaceDetection::GenerateClassifierCadidates(int baseImgSize)
     {
         std::vector<std::vector<HaarFeature> > features(4);
-        int minLen = 5;  //modify_flag
+        int minLen = 4;  //modify_flag
         for (int sRow = 0; sRow < baseImgSize; sRow += 1)
         {
             for (int sCol = 0; sCol < baseImgSize; sCol += 1)
@@ -1320,36 +1320,36 @@ namespace MagicDIP
                 int colMaxLen = baseImgSize - sCol;
                 int rowMaxLen = baseImgSize - sRow;
 
-                for (int lRow = minLen; lRow <= rowMaxLen; lRow += 1)
+                for (int lRow = minLen; lRow <= rowMaxLen; lRow += 2)
                 {
-                    for (int lCol = minLen * 2; lCol <= colMaxLen; lCol += 2)
+                    for (int lCol = minLen * 2; lCol <= colMaxLen; lCol += 4)
                     {
                         HaarFeature feature = {sRow, sCol, lRow, lCol, 0};
                         features.at(0).push_back(feature);
                     }
                 }
 
-                for (int lRow = minLen * 2; lRow <= rowMaxLen; lRow += 2)
+                for (int lRow = minLen * 2; lRow <= rowMaxLen; lRow += 4)
                 {
-                    for (int lCol = minLen; lCol <= colMaxLen; lCol += 1)
+                    for (int lCol = minLen; lCol <= colMaxLen; lCol += 2)
                     {
                         HaarFeature feature = {sRow, sCol, lRow, lCol, 1};
                         features.at(1).push_back(feature);
                     }
                 }
 
-                for (int lRow = minLen; lRow <= rowMaxLen; lRow += 1)
+                for (int lRow = minLen; lRow <= rowMaxLen; lRow += 2)
                 {
-                    for (int lCol = minLen * 3; lCol <= colMaxLen; lCol += 3)
+                    for (int lCol = minLen * 3; lCol <= colMaxLen; lCol += 6)
                     {
                         HaarFeature feature = {sRow, sCol, lRow, lCol, 2};
                         features.at(2).push_back(feature);
                     }
                 }
 
-                for (int lRow = minLen * 2; lRow <= rowMaxLen; lRow += 2)
+                for (int lRow = minLen * 2; lRow <= rowMaxLen; lRow += 4)
                 {
-                    for (int lCol = minLen * 2; lCol <= colMaxLen; lCol += 2)
+                    for (int lCol = minLen * 2; lCol <= colMaxLen; lCol += 4)
                     {
                         HaarFeature feature = {sRow, sCol, lRow, lCol, 3};
                         features.at(3).push_back(feature);
@@ -1357,7 +1357,7 @@ namespace MagicDIP
                 }
             }
         }
-        double sampleRate = 0.05;
+        double sampleRate = 0.15;
         //int imgId = 0;
         int classifierId = 0;
         for (int typeId = 0; typeId < 4; typeId++)
@@ -1499,7 +1499,7 @@ namespace MagicDIP
 
     int AdaBoostFaceDetection::RemoveSimilarClassifierCandidates(const HaarFeature& hf)
     {
-        double similarThreshold = 0.7;
+        double similarThreshold = 0.65;
         int validCandCount = 0;
         for (std::vector<HaarClassifier*>::iterator itr = mClassifierCandidates.begin(); itr != mClassifierCandidates.end(); itr++)
         {
@@ -1637,13 +1637,13 @@ namespace MagicDIP
         
         srand(time(NULL)); //sample feature
 
-        int curStageLevelCount = 8;
+        int curStageLevelCount = 10;
         int levelCountDelta = 11;  //modify_flag
         int maxStageLevelCount = 200;
         int restartLevelCount = 50;        
         int maxTryNum = 1;  //modify_flag
         int maxPassNum = 3; //modify_flag
-        int nonFaceBreakCount = originalNonFaceCount * 0.001;  //modify_flag
+        int nonFaceBreakCount = originalNonFaceCount * 0.005;  //modify_flag
         int nonFaceExportCount = originalNonFaceCount * 0.2;  //modify_flag
         for (int stageId = 0; stageId < stageCount; stageId++)
         {
@@ -1897,7 +1897,7 @@ namespace MagicDIP
     int RealTimeFaceDetection::Detect(const cv::Mat& img, std::vector<int>& faces) const
     {
         faces.clear();
-        double stepSize = 2;
+        double stepSize = 1;
         double deltaScale = 1.25;
         double curScale = 1.0;
         int curStep = stepSize * curScale;
