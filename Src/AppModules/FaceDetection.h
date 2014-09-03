@@ -25,6 +25,7 @@ namespace MagicApp
         int LearnDetector(const std::string& faceFile, const std::string& nonFaceFile, DetectionMethod dm);
         int DetectFace(const cv::Mat& img, std::vector<int>& faces) const;
         void Save(const std::string& fileName, const std::string& detectFileName) const;
+        void SaveByEnhanceThreshold(const std::string& fileName, const std::string& detectFileName, double percentage) const;
         void Load(const std::string& fileName);
         void SaveFeatureAsImage(const std::string& filePath) const;
 

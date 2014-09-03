@@ -68,6 +68,7 @@ namespace MagicDIP
             int sRow, int sCol, int boxSize, double scale, int avgImgGray) const;
         int Predict(const ImageLoader& imgLoader, int dataId, int boxSize, int avgImgGray) const;
         void Save(std::ofstream& fout) const;
+        void SaveByEnhanceThreshold(double enhancePercentage, std::ofstream& fout) const;
         void Load(std::ifstream& fin);
         void SaveFeatureAsImage(const std::string& filePath, int baseSize, int detectorId) const;
 
@@ -104,6 +105,7 @@ namespace MagicDIP
         int Detect(const cv::Mat& img, std::vector<int>& faces) const;
         int DetectSpecialLocation(const cv::Mat& img, int rid, int cid, int subSize, double scale, std::vector<int>& faces) const;
         void Save(const std::string& fileName) const;
+        void SaveByEnhanceThreshold(double enhancePercentage, const std::string& fileName) const;
         void Load(const std::string& fileName);
         void SaveFeatureAsImage(const std::string& filePath) const;
 

@@ -114,6 +114,39 @@ namespace MagicApp
         }
         fout.close();
     }
+
+    void FaceDetection::SaveByEnhanceThreshold(const std::string& fileName, const std::string& detectFileName, double percentage) const
+    {
+        std::ofstream fout(fileName);
+        fout << mDm << std::endl;
+        fout << detectFileName << std::endl;
+        std::string filePath = fileName;
+        std::string::size_type pos = filePath.rfind("/");
+        if (pos == std::string::npos)
+        {
+            pos = filePath.rfind("\\");
+        }
+        filePath.erase(pos);
+        filePath += "/";
+        std::string detectFileFullName = filePath + detectFileName;
+        switch (mDm)
+        {
+        case DM_Default:
+            if (mpRealTimeDetector != NULL)
+            {
+                //mpRealTimeDetector->Save(detectFileFullName);
+                mpRealTimeDetector->SaveByEnhanceThreshold(percentage, detectFileFullName);
+            }
+            else
+            {
+                DebugLog << "Error: AdaBoostDetector is NULL" << std::endl;
+            }
+            break;
+        default:
+            break;
+        }
+        fout.close();
+    }
      
     void FaceDetection::Load(const std::string& fileName)
     {
@@ -728,7 +761,7 @@ namespace MagicApp
                 int imgW = imgOrigin.cols;
                 int imgH = imgOrigin.rows;
                 int markNum = marks.size() / 2;
-                int markWidth = 1;
+                int markWidth = 2;
                 for (int mid = 0; mid < markNum; mid++)
                 {
                     int wPos = floor(marks.at(2 * mid + 1) + 0.5);

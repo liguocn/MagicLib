@@ -1223,6 +1223,20 @@ namespace MagicDIP
         }
         fout << std::endl;
     }
+
+    void AdaBoostFaceDetection::SaveByEnhanceThreshold(double enhancePercentage, std::ofstream& fout) const
+    {
+        fout << mThreshold * enhancePercentage << " " << mClassifiers.size() << std::endl;
+        for (std::vector<HaarClassifier*>::const_iterator itr = mClassifiers.begin(); itr != mClassifiers.end(); itr++)
+        {
+            (*itr)->Save(fout);
+        }
+        for (std::vector<double>::const_iterator itr = mClassifierWeights.begin(); itr != mClassifierWeights.end(); itr++)
+        {
+            fout << (*itr) << " ";
+        }
+        fout << std::endl;
+    }
         
     void AdaBoostFaceDetection::Load(std::ifstream& fin)
     {
@@ -1610,7 +1624,7 @@ namespace MagicDIP
 
         Reset();
         //int stageCount = layerCounts.size();
-        int stageCount = 50; //modify_flag
+        int stageCount = 35; //modify_flag
         mCascadedDetectors.reserve(stageCount);
 
         ImageLoader faceImgLoader;
@@ -1637,26 +1651,48 @@ namespace MagicDIP
         
         srand(time(NULL)); //sample feature
 
-        int curStageLevelCount = 10;
+        int curStageLevelCount = 15;
         int levelCountDelta = 11;  //modify_flag
         int maxStageLevelCount = 200;
         int restartLevelCount = 50;        
         int maxTryNum = 1;  //modify_flag
         int maxPassNum = 3; //modify_flag
-        int nonFaceBreakCount = originalNonFaceCount * 0.005;  //modify_flag
-        int nonFaceExportCount = originalNonFaceCount * 0.2;  //modify_flag
+        int nonFaceBreakCount = originalNonFaceCount * 0.01;  //modify_flag
+        int nonFaceExportCount = originalNonFaceCount * 0.05;  //modify_flag
         for (int stageId = 0; stageId < stageCount; stageId++)
         {
             //Save temp
             std::string tempFileName("./temp.abfd");
             Save(tempFileName);
             //
-            if (curStageLevelCount == maxStageLevelCount || stageId >= 5) //modify_flag
+            //
+            if (stageId == 0)
+            {
+                maxStageLevelCount = 100;
+                restartLevelCount = 40;
+            }
+            else if (stageId == 5)
+            {
+                maxStageLevelCount = 150;
+                restartLevelCount = 50;
+            }
+            else if (stageId == 8)
+            {
+                maxStageLevelCount = 200;
+                restartLevelCount = 100;
+            }
+            else if (stageId == 11)
+            {
+                maxStageLevelCount = 250;
+                restartLevelCount = 100;
+            }
+            //
+            if (curStageLevelCount == maxStageLevelCount || stageId >= 2) //modify_flag
             {
                 curStageLevelCount = restartLevelCount + rand() % (maxStageLevelCount - restartLevelCount);
                 DebugLog << "Stage " << stageId << " random level count: " << curStageLevelCount << std::endl;
             }
-            double acceptNonFaceDetectRate = 0.15;  //modify_flag
+            double acceptNonFaceDetectRate = 0.11;  //modify_flag
             int tryNum = maxTryNum;
             int passNum = maxPassNum;
             bool isEmptyInput = false;
@@ -1666,7 +1702,7 @@ namespace MagicDIP
             while (true)
             {
                 DebugLog << "Stage " << stageId << " level count: " << curStageLevelCount << std::endl;
-                AdaBoostFaceDetection* pDetector = new AdaBoostFaceDetection(0.999); //modify_flag
+                AdaBoostFaceDetection* pDetector = new AdaBoostFaceDetection(0.998); //modify_flag
                 int res = pDetector->Learn(faceImgLoader, faceValidFlag, nonFaceImgLoader, nonFaceValidFlag, 
                     curStageLevelCount, mBaseImgSize, mAvgImgGray);
                 if (res != MAGIC_NO_ERROR)
@@ -1933,7 +1969,7 @@ namespace MagicDIP
             //break;
         }
         //DebugLog << "  Post-Process faces: " << faces.size() / 4 << std::endl;
-        //PostProcessFaces(faces);
+        PostProcessFaces(faces);
         return (faces.size() / 4);
     }
 
@@ -1954,6 +1990,17 @@ namespace MagicDIP
         for (std::vector<AdaBoostFaceDetection* >::const_iterator itr = mCascadedDetectors.begin(); itr != mCascadedDetectors.end(); itr++)
         {
             (*itr)->Save(fout);
+        }
+        fout.close();
+    }
+
+    void RealTimeFaceDetection::SaveByEnhanceThreshold(double enhancePercentage, const std::string& fileName) const
+    {
+        std::ofstream fout(fileName);
+        fout << mBaseImgSize << " " << mCascadedDetectors.size() << std::endl;
+        for (std::vector<AdaBoostFaceDetection* >::const_iterator itr = mCascadedDetectors.begin(); itr != mCascadedDetectors.end(); itr++)
+        {
+            (*itr)->SaveByEnhanceThreshold(enhancePercentage, fout);
         }
         fout.close();
     }
