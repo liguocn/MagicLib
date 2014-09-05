@@ -1624,7 +1624,7 @@ namespace MagicDIP
 
         Reset();
         //int stageCount = layerCounts.size();
-        int stageCount = 35; //modify_flag
+        int stageCount = 30; //modify_flag
         mCascadedDetectors.reserve(stageCount);
 
         ImageLoader faceImgLoader;
@@ -1651,14 +1651,14 @@ namespace MagicDIP
         
         srand(time(NULL)); //sample feature
 
-        int curStageLevelCount = 15;
+        int curStageLevelCount = 25;
         int levelCountDelta = 11;  //modify_flag
         int maxStageLevelCount = 200;
         int restartLevelCount = 50;        
         int maxTryNum = 1;  //modify_flag
         int maxPassNum = 3; //modify_flag
-        int nonFaceBreakCount = originalNonFaceCount * 0.01;  //modify_flag
-        int nonFaceExportCount = originalNonFaceCount * 0.05;  //modify_flag
+        int nonFaceBreakCount = originalNonFaceCount * 0.001;  //modify_flag
+        int nonFaceExportCount = originalNonFaceCount * 0.01;  //modify_flag
         for (int stageId = 0; stageId < stageCount; stageId++)
         {
             //Save temp
