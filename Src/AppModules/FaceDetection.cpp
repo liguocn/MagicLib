@@ -286,7 +286,7 @@ namespace MagicApp
         const int maxSize = 512;
         char pLine[maxSize];
         fin.getline(pLine, maxSize);
-        double avgGray = 128;
+        double avgGray = 105;
         for (int dataId = 0; dataId < dataSize; dataId++)
         {
             fin.getline(pLine, maxSize);

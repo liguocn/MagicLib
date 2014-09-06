@@ -1935,7 +1935,7 @@ namespace MagicDIP
         faces.clear();
         double stepSize = 1;
         double deltaScale = 1.25;
-        double curScale = 1.0;
+        double curScale = 1.0;  //modify_flag
         int curStep = stepSize * curScale;
         int curSubImgSize = curScale * mBaseImgSize;
         int imgH = img.rows;
@@ -1966,7 +1966,7 @@ namespace MagicDIP
             curScale *= deltaScale;
             curSubImgSize = curScale * mBaseImgSize;
             curStep = stepSize * curScale;
-            //break;
+            //break;  //modify_flag
         }
         //DebugLog << "  Post-Process faces: " << faces.size() / 4 << std::endl;
         PostProcessFaces(faces);
