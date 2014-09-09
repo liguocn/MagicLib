@@ -219,40 +219,31 @@ namespace MagicApp
                 return MAGIC_INVALID_INPUT;
             }
         }
-        landPath.erase(pos);
+        //landPath.erase(pos);
 
         int dataPerImgCount = 20;
         srand(time(NULL));
-        int randomSize = 100;
+        int randomSize = 80;
         std::vector<double> initTheta;
         std::vector<double> finalTheta;
         std::vector<double> interTheta;
         std::ifstream fin(landFile);
         int dataSize;
         fin >> dataSize;
-        dataSize = 5448;
+        const int maxSize = 512;
+        char pLine[maxSize];
+        fin.getline(pLine, maxSize);
         std::vector<std::string> imgFiles(dataSize);
-        int imgH, imgW;
         int keyPointCount;
         for (int dataId = 0; dataId < dataSize; dataId++)
         {
-            std::string featureName;
-            fin >> featureName;
+            fin.getline(pLine, maxSize);
+            std::string featureName(pLine);
             featureName = landPath + featureName;
             std::string imgName = featureName;
             std::string::size_type pos = imgName.rfind(".");
-            imgName.replace(pos, 5, ".jpg");
-            std::string grayImgName = imgName;
-            pos = grayImgName.rfind(".");
-            grayImgName.replace(pos, 4, "_gray.jpg");
-            imgFiles.at(dataId) = grayImgName;
-            if (dataId == 0)
-            {   
-                cv::Mat img = cv::imread(grayImgName);
-                imgH = img.rows;
-                imgW = img.cols;
-                img.release();
-            }
+            imgName.replace(pos, 5, ".jpg");         
+            imgFiles.at(dataId) = imgName;
             std::ifstream landFin(featureName);
             int markCount;
             landFin >> markCount;
@@ -263,21 +254,14 @@ namespace MagicApp
                 finalTheta.reserve(2 * markCount * dataSize * dataPerImgCount);
                 interTheta = std::vector<double>(markCount * 2, 0);
             }
-            double cenRow = 0;
-            double cenCol = 0;
             for (int markId = 0; markId < markCount; markId++)
             {
-                double r, w;
-                landFin >> w >> r;
-                r = imgH - r;
-                interTheta.at(markId * 2) = r;
-                interTheta.at(markId * 2 + 1) = w;
-                cenRow += r;
-                cenCol += w;
+                double row, col;
+                landFin >> col >> row;
+                interTheta.at(markId * 2) = row;
+                interTheta.at(markId * 2 + 1) = col;
             }
             landFin.close();
-            cenRow /= markCount;
-            cenCol /= markCount;
             int initialNum = 0;
             while (initialNum < dataPerImgCount)
             {
@@ -287,14 +271,10 @@ namespace MagicApp
                 {
                     continue;
                 }
-                double initialY = cenRow + yRand;
-                initialY = initialY < 0 ? 0 : (initialY > imgH - 1 ? imgH - 1 : initialY);
-                double initialX = cenCol + xRand;
-                initialX = initialX < 0 ? 0 : (initialX > imgW - 1 ? imgW - 1 : initialX);
                 for (int markId = 0; markId < markCount; markId++)
                 {
-                    initTheta.push_back( mMeanFace.at(markId * 2) + initialY );
-                    initTheta.push_back( mMeanFace.at(markId * 2 + 1) + initialX );
+                    initTheta.push_back( mMeanFace.at(markId * 2) + yRand );
+                    initTheta.push_back( mMeanFace.at(markId * 2 + 1) + xRand );
                     finalTheta.push_back( interTheta.at(markId * 2) );
                     finalTheta.push_back( interTheta.at(markId * 2 + 1) );
                 }
@@ -306,7 +286,7 @@ namespace MagicApp
         {
             mpRegression = new MagicDIP::ExplicitShapeRegression;
         }
-        DebugLog << "Load Image File Names" << std::endl;
+        DebugLog << "Load Image Files" << std::endl;
         return mpRegression->LearnRegression(imgFiles, initTheta, finalTheta, dataPerImgCount, keyPointCount, 100, 100, 5, 2);
     }
     
@@ -350,29 +330,20 @@ namespace MagicApp
                 return MAGIC_INVALID_INPUT;
             }
         }
-        landPath.erase(pos);
+        //landPath.erase(pos);
         std::ifstream fin(landFile);
         int dataSize;
         fin >> dataSize;
         mMeanFace.clear();
+        const int maxSize = 512;
+        char pLine[maxSize];
+        fin.getline(pLine, maxSize);
         int imgH;
         for (int dataId = 0; dataId < dataSize; dataId++)
         {
-            std::string featureName;
-            fin >> featureName;
-            featureName = landPath + featureName;
-            if (dataId == 0)
-            {
-                std::string imgName = featureName;
-                std::string::size_type pos = imgName.rfind(".");
-                imgName.replace(pos, 5, ".jpg");
-                std::string grayImgName = imgName;
-                pos = grayImgName.rfind(".");
-                grayImgName.replace(pos, 4, "_gray.jpg");
-                cv::Mat img = cv::imread(grayImgName);
-                imgH = img.rows;
-                img.release();
-            }
+            fin.getline(pLine, maxSize);
+            std::string featureName(pLine);
+            featureName = landPath + featureName;       
             std::ifstream landFin(featureName);
             int markCount;
             landFin >> markCount;
@@ -382,11 +353,10 @@ namespace MagicApp
             }
             for (int markId = 0; markId < markCount; markId++)
             {
-                double r, w;
-                landFin >> w >> r;
-                r = imgH - r;
-                mMeanFace.at(markId * 2) += r;
-                mMeanFace.at(markId * 2 + 1) += w;
+                double row, col;
+                landFin >> col >> row;
+                mMeanFace.at(markId * 2) += row;
+                mMeanFace.at(markId * 2 + 1) += col;
             }
             landFin.close();
         }
@@ -395,22 +365,7 @@ namespace MagicApp
             (*itr) /= dataSize;
         }
         fin.close();
-        //Move to (0, 0)
-        double cenR = 0;
-        double cenW = 0;
-        int markCount = mMeanFace.size() / 2;
-        for (int markId = 0; markId < markCount; markId++)
-        {
-            cenR += mMeanFace.at(markId * 2);
-            cenW += mMeanFace.at(markId * 2 + 1);
-        }
-        cenR /= markCount;
-        cenW /= markCount;
-        for (int markId = 0; markId < markCount; markId++)
-        {
-            mMeanFace.at(markId * 2) -= cenR;
-            mMeanFace.at(markId * 2 + 1) -= cenW;
-        }
+
         return MAGIC_NO_ERROR;
     }
 

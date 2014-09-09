@@ -43,7 +43,7 @@ namespace MagicApp
 
     private:
         MagicDIP::ExplicitShapeRegression* mpRegression;
-        std::vector<double> mMeanFace; //center at (0, 0)
+        std::vector<double> mMeanFace; //row, col
     };
 
 }
