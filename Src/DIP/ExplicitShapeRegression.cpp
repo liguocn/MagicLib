@@ -2,7 +2,7 @@
 #include "../MachineLearning/RandomMethod.h"
 #include "../Tool/ErrorCodes.h"
 #include "../Tool/LogSystem.h"
-//#include "../Common/ToolKit.h"
+#include "../Tool/Profiler.h"
 #include <stdio.h>
 #include <time.h>
 
@@ -68,6 +68,7 @@ namespace MagicDIP
         std::vector<double> deltaTheta(curTheta.size());
         for (int outerId = 0; outerId < outerCount; outerId++)
         {
+            DebugLog << "Out stage: " << outerId << std::endl;
             interTheta = curTheta;
             for (int thetaId = 0; thetaId < interTheta.size(); thetaId++)
             {
@@ -77,8 +78,9 @@ namespace MagicDIP
             int fernBaseId = outerId * mInnerFernCount;
             for (int innerId = 0; innerId < mInnerFernCount; innerId++)
             {
-                //double timeStart = MagicCore::ToolKit::GetTime();
-                DebugLog << "fernId: " << fernBaseId + innerId << std::endl; 
+                DebugLog << "  Inner stage: " << innerId << std::endl;
+                double timeStart = MagicTool::Profiler::GetTime();
+                DebugLog << "    fernId: " << fernBaseId + innerId << std::endl;
 
                 int fernId = fernBaseId + innerId;
                 double avgDelta = 0;
@@ -88,7 +90,7 @@ namespace MagicDIP
                     avgDelta += fabs(deltaTheta.at(thetaId));
                 }
                 avgDelta /= curTheta.size();
-                DebugLog << "  AvgDelta: " << avgDelta << std::endl;
+                DebugLog << "    AvgDelta: " << avgDelta << std::endl;
                 MagicML::RandomFern* pFern = new MagicML::RandomFern;
                 pFern->Learn(dataX, featureSizePerKey * keyPointCount, deltaTheta, thetaDim, fernSize);
                 mRandomFerns.push_back(pFern);
@@ -124,7 +126,7 @@ namespace MagicDIP
                     }
                 }
 
-                //DebugLog << "  time: " << MagicCore::ToolKit::GetTime() - timeStart << std::endl;
+                DebugLog << "    time: " << MagicTool::Profiler::GetTime() - timeStart << std::endl;
             }
         }
 
