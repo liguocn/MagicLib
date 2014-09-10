@@ -68,6 +68,7 @@ namespace MagicDIP
         std::vector<double> deltaTheta(curTheta.size());
         for (int outerId = 0; outerId < outerCount; outerId++)
         {
+            double timeStart = MagicTool::Profiler::GetTime();
             DebugLog << "Out stage: " << outerId << std::endl;
             interTheta = curTheta;
             for (int thetaId = 0; thetaId < interTheta.size(); thetaId++)
@@ -78,10 +79,7 @@ namespace MagicDIP
             int fernBaseId = outerId * mInnerFernCount;
             for (int innerId = 0; innerId < mInnerFernCount; innerId++)
             {
-                DebugLog << "  Inner stage: " << innerId << std::endl;
-                double timeStart = MagicTool::Profiler::GetTime();
-                DebugLog << "    fernId: " << fernBaseId + innerId << std::endl;
-
+                DebugLog << "  Inner stage: " << innerId << "  fernId: " << fernBaseId + innerId << std::endl;
                 int fernId = fernBaseId + innerId;
                 double avgDelta = 0;
                 for (int thetaId = 0; thetaId < curTheta.size(); thetaId++)
@@ -125,9 +123,9 @@ namespace MagicDIP
                         curTheta.at(baseIndex + thetaId) += predictDelta.at(thetaId);
                     }
                 }
-
-                DebugLog << "    time: " << MagicTool::Profiler::GetTime() - timeStart << std::endl;
             }
+            DebugLog << "time: " << MagicTool::Profiler::GetTime() - timeStart << std::endl;
+            Save("./temp.shape");
         }
 
         return MAGIC_NO_ERROR;

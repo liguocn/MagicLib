@@ -1,7 +1,7 @@
 #pragma once
 
-//#define PLATFORM_WIN
-#define PLATFORM_MAC
+#define PLATFORM_WIN
+//#define PLATFORM_MAC
 
 namespace MagicTool
 {

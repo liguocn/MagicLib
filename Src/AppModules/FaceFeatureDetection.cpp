@@ -265,7 +265,9 @@ namespace MagicApp
 
     int ShapeFaceFeatureDetection::LearnRegression(const std::string& landFile)
     {
+        DebugLog << "ShapeFaceFeatureDetection::LearnRegression" << std::endl;
         CalMeanFace(landFile);
+        DebugLog << "CalMeanFace" << std::endl;
         std::string landPath = landFile;
         std::string::size_type pos = landPath.rfind("/");
         if (pos == std::string::npos)
@@ -279,10 +281,14 @@ namespace MagicApp
         landPath.erase(pos);
         landPath += "/";
 
-        int dataPerImgCount = 50;
-        int randomSize = 30;
+        int dataPerImgCount = 150; //modify_flag
+        int randomSize = 60; //modify_flag
         srand(time(NULL));
         std::vector<int> randomDeltaList = GenerateRandomInitDelta(dataPerImgCount, randomSize);
+        for (int randomId = 0; randomId < randomDeltaList.size() / 2; randomId++)
+        {
+            DebugLog << "random delta: " << randomDeltaList.at(randomId * 2) << " " << randomDeltaList.at(randomId * 2 + 1) << std::endl;
+        }
         std::vector<double> initTheta;
         std::vector<double> finalTheta;
         std::vector<double> interTheta;
@@ -294,6 +300,7 @@ namespace MagicApp
         fin.getline(pLine, maxSize);
         std::vector<std::string> imgFiles(dataSize);
         int keyPointCount;
+        DebugLog << "dataSize: " << dataSize << std::endl;
         for (int dataId = 0; dataId < dataSize; dataId++)
         {
             fin.getline(pLine, maxSize);
@@ -340,7 +347,8 @@ namespace MagicApp
             mpRegression = new MagicDIP::ExplicitShapeRegression;
         }
         DebugLog << "Load Image Files" << std::endl;
-        return mpRegression->LearnRegression(imgFiles, initTheta, finalTheta, dataPerImgCount, keyPointCount, 100, 100, 5, 2);
+        //modify_flag
+        return mpRegression->LearnRegression(imgFiles, initTheta, finalTheta, dataPerImgCount, keyPointCount, 100, 100, 8, 30);
     }
     
     int ShapeFaceFeatureDetection::ShapeRegression(const cv::Mat& img, const std::vector<double>& initPos, std::vector<double>& finalPos) const
@@ -382,9 +390,12 @@ namespace MagicApp
         std::ifstream imgFin(imgFiles);
         int imgCount;
         imgFin >> imgCount;
+        DebugLog << "ShapeFaceFeatureDetection::TestShapeRegression: " << imgPath << "  imgCount: " << imgCount << std::endl;
+        DebugLog << "Test result path: " << resPath << std::endl;
         const int maxSize = 512;
         char pLine[maxSize];
         imgFin.getline(pLine, maxSize);
+        int markSize = 1;
         for (int imgId = 0; imgId < imgCount; imgId++)
         {
             imgFin.getline(pLine, maxSize);
@@ -394,22 +405,37 @@ namespace MagicApp
             int imgH = img.rows;
             int imgW = img.cols;
             std::vector<double> featurePos;
-            if (ShapeRegressionFromMeanFace(img, featurePos))
+            if (ShapeRegressionFromMeanFace(img, featurePos) == MAGIC_NO_ERROR)
             {
                 int featureSize = featurePos.size() / 2;
                 for (int featureId = 0; featureId < featureSize; featureId++)
                 {
                     int row = featurePos.at(featureId * 2);
-                    row = row > 0 ? (row < imgH ? row : imgH - 1) : 0;
+                    //row = row > 0 ? (row < imgH ? row : imgH - 1) : 0;
                     int col = featurePos.at(featureId * 2 + 1);
-                    col = col > 0 ? (col < imgW ? col : imgW - 1) : 0;
-                    img.ptr(row, col)[0] = 255;
+                    //col = col > 0 ? (col < imgW ? col : imgW - 1) : 0;
+                    for (int rid = row - markSize; rid <= row + markSize; rid++)
+                    {
+                        for (int cid = col - markSize; cid <= col + markSize; cid++)
+                        {
+                            int rid_safe = rid > 0 ? (rid < imgH ? rid : imgH - 1) : 0;
+                            int cid_safe = cid > 0 ? (cid < imgW ? cid : imgW - 1) : 0;
+                            img.ptr(rid_safe, cid_safe)[0] = 0;
+                            img.ptr(rid_safe, cid_safe)[1] = 255;
+                            img.ptr(rid_safe, cid_safe)[2] = 255;
+                        }
+                    }
                 }
                 std::stringstream ss;
                 ss << resPath << imgId << ".jpg";
                 std::string featureImgName;
                 ss >> featureImgName;
                 cv::imwrite(featureImgName, img);
+                DebugLog << "test: " << imgId << " imgName: " << featureImgName << std::endl;
+            }
+            else
+            {
+                DebugLog << "img" << imgId << " error: no detect" << std::endl;
             }
             img.release();
         }
@@ -435,6 +461,9 @@ namespace MagicApp
 
     void ShapeFaceFeatureDetection::Load(const std::string& regFileName, const std::string& meanFaceName)
     {
+        DebugLog << "ShapeFaceFeatureDetection::Load: " << std::endl;
+        DebugLog << "  " << regFileName << std::endl;
+        DebugLog << "  " << meanFaceName << std::endl; 
         if (mpRegression == NULL)
         {
             mpRegression = new MagicDIP::ExplicitShapeRegression;
@@ -455,6 +484,39 @@ namespace MagicApp
             mMeanFace.push_back(col);
         }
         fin.close();
+        //Move mean face to center, test image size is 128 * 128
+        double minX = 1.0e10;
+        double maxX = -1.0e10;
+        double minY = 1.0e10;
+        double maxY = -1.0e10;
+        for (int markId = 0; markId < markCount; markId++)
+        {
+            if (mMeanFace.at(markId * 2) < minY)
+            {
+                minY = mMeanFace.at(markId * 2);
+            }
+            if (mMeanFace.at(markId * 2) > maxY)
+            {
+                maxY = mMeanFace.at(markId * 2);
+            }
+            if (mMeanFace.at(markId * 2 + 1) < minX)
+            {
+                minX = mMeanFace.at(markId * 2 + 1);
+            }
+            if (mMeanFace.at(markId * 2 + 1) > maxX)
+            {
+                maxX = mMeanFace.at(markId * 2 + 1);
+            }
+        }
+        double cenX = (minX + maxX) / 2.0;
+        double cenY = (minY + maxY) / 2.0;
+        double deltaX = 64 - cenX;
+        double deltaY = 64 - cenY;
+        for (int markId = 0; markId < markCount; markId++)
+        {
+            mMeanFace.at(markId * 2) = mMeanFace.at(markId * 2) + deltaY;
+            mMeanFace.at(markId * 2 + 1) = mMeanFace.at(markId * 2 + 1) + deltaX;
+        }
     }
 
     std::vector<double> ShapeFaceFeatureDetection::GetMeanFace(void) const
@@ -474,7 +536,9 @@ namespace MagicApp
                 return MAGIC_INVALID_INPUT;
             }
         }
-        //landPath.erase(pos);
+        landPath.erase(pos);
+        landPath += "/";
+        DebugLog << "landPath: " << landPath << std::endl;
         std::ifstream fin(landFile);
         int dataSize;
         fin >> dataSize;
@@ -482,7 +546,6 @@ namespace MagicApp
         const int maxSize = 512;
         char pLine[maxSize];
         fin.getline(pLine, maxSize);
-        int imgH;
         for (int dataId = 0; dataId < dataSize; dataId++)
         {
             fin.getline(pLine, maxSize);
