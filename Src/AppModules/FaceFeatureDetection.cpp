@@ -281,8 +281,8 @@ namespace MagicApp
         landPath.erase(pos);
         landPath += "/";
 
-        int dataPerImgCount = 150; //modify_flag
-        int randomSize = 60; //modify_flag
+        int dataPerImgCount = 200; //modify_flag
+        int randomSize = 30; //modify_flag
         srand(time(NULL));
         std::vector<int> randomDeltaList = GenerateRandomInitDelta(dataPerImgCount, randomSize);
         for (int randomId = 0; randomId < randomDeltaList.size() / 2; randomId++)
@@ -348,7 +348,7 @@ namespace MagicApp
         }
         DebugLog << "Load Image Files" << std::endl;
         //modify_flag
-        return mpRegression->LearnRegression(imgFiles, initTheta, finalTheta, dataPerImgCount, keyPointCount, 100, 100, 8, 30);
+        return mpRegression->LearnRegression(imgFiles, initTheta, finalTheta, dataPerImgCount, keyPointCount, 100, 100, 5, 30);
     }
     
     int ShapeFaceFeatureDetection::ShapeRegression(const cv::Mat& img, const std::vector<double>& initPos, std::vector<double>& finalPos) const

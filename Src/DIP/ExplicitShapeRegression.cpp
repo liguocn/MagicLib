@@ -66,8 +66,13 @@ namespace MagicDIP
         std::vector<double> curTheta = initTheta;
         std::vector<double> interTheta;
         std::vector<double> deltaTheta(curTheta.size());
+        bool earlyStop = false;
         for (int outerId = 0; outerId < outerCount; outerId++)
         {
+            if (earlyStop)
+            {
+                break;
+            }
             double timeStart = MagicTool::Profiler::GetTime();
             DebugLog << "Out stage: " << outerId << std::endl;
             interTheta = curTheta;
@@ -89,6 +94,10 @@ namespace MagicDIP
                 }
                 avgDelta /= curTheta.size();
                 DebugLog << "    AvgDelta: " << avgDelta << std::endl;
+                if (avgDelta < 0.5)  //modify_flag
+                {
+                    earlyStop = true;
+                }
                 MagicML::RandomFern* pFern = new MagicML::RandomFern;
                 pFern->Learn(dataX, featureSizePerKey * keyPointCount, deltaTheta, thetaDim, fernSize);
                 mRandomFerns.push_back(pFern);
