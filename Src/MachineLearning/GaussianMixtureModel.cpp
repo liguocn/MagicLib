@@ -2,6 +2,7 @@
 #include "Clustering.h"
 #include "Eigen/Dense"
 #include "../Tool/LogSystem.h"
+#include "../Tool/ErrorCodes.h"
 
 namespace MagicML
 {
@@ -160,7 +161,7 @@ namespace MagicML
         Clear();
     }
 
-    void GaussianMixtureModel::CalParameter(const std::vector<double>& inputData, int dim, int k, const std::vector<int>& clusterIndex)
+    int GaussianMixtureModel::CalParameter(const std::vector<double>& inputData, int dim, int k, const std::vector<int>& clusterIndex)
     {
         Clear();
         int dataCount = clusterIndex.size();
@@ -176,6 +177,7 @@ namespace MagicML
             pGM->CalParameter(inputData, dim, clusterIndexList.at(cid));
             mGaussianList.at(cid) = pGM;
         }
+        return MAGIC_NO_ERROR;
     }
 
     double GaussianMixtureModel::Pro(const std::vector<double>& data)

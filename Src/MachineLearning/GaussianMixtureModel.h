@@ -29,7 +29,7 @@ namespace MagicML
         GaussianMixtureModel();
         ~GaussianMixtureModel();
 
-        void CalParameter(const std::vector<double>& inputData, int dim, int k, const std::vector<int>& clusterIndex); 
+        int CalParameter(const std::vector<double>& inputData, int dim, int k, const std::vector<int>& clusterIndex); 
         double Pro(const std::vector<double>& data);
         double ComponentPro(const std::vector<double>& data, int componentId);
         int GetClusterId(const std::vector<double>& data);
