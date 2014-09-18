@@ -176,7 +176,8 @@ public:
      */
     void save(std::string filename)
     {
-        FILE* fout = fopen(filename.c_str(), "wb");
+        FILE* fout;
+        errno_t err = fopen_s(&fout, filename.c_str(), "wb");
         if (fout == NULL) {
             throw FLANNException("Cannot open file");
         }
@@ -370,7 +371,8 @@ public:
 private:
     IndexType* load_saved_index(const Matrix<ElementType>& dataset, const std::string& filename, Distance distance)
     {
-        FILE* fin = fopen(filename.c_str(), "rb");
+        FILE* fin;
+        errno_t err = fopen_s(&fin, filename.c_str(), "rb");
         if (fin == NULL) {
             return NULL;
         }

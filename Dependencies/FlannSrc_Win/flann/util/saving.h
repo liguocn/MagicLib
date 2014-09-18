@@ -62,9 +62,9 @@ struct IndexHeader
     IndexHeader()
 	{
         memset(signature, 0, sizeof(signature));
-        strcpy(signature, FLANN_SIGNATURE_);
+        strcpy_s(signature, FLANN_SIGNATURE_);
         memset(version, 0, sizeof(version));
-        strcpy(version, FLANN_VERSION_);
+        strcpy_s(version, FLANN_VERSION_);
 	}
 
 private:
