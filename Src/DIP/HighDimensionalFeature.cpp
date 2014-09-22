@@ -20,6 +20,22 @@ namespace MagicDIP
     int HighDimensionalFeature::Learn(const std::vector<std::string>& imgFiles, const std::vector<int>& marksList,
                                       int markCountPerImg, int multiScaleCount, int targetDim)
     {
+        int dataCount = imgFiles.size();
+        if (dataCount < 1)
+        {
+            return MAGIC_EMPTY_INPUT;
+        }
+        if (markCountPerImg * dataCount != marksList.size())
+        {
+            return MAGIC_INVALID_INPUT;
+        }
+        mMarkCount = markCountPerImg;
+        mMultiScaleCount = multiScaleCount;
+        
+        //Calculate high dimensional features
+        
+        //Compress dimension
+        
         return MAGIC_NO_ERROR;
     }
     
