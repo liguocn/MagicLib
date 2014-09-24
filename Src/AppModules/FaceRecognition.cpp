@@ -2,29 +2,35 @@
 #include "../Math/HomoMatrix3.h"
 #include "../Tool/ErrorCodes.h"
 #include "../Tool/LogSystem.h"
+#include "../Tool/CommonTools.h"
+#include "../DIP/HighDimensionalFeature.h"
+#include "../MachineLearning/Clustering.h"
 
 namespace MagicApp
 {
-    FaceRecognition::FaceRecognition()
+    FaceRecognition::FaceRecognition() : 
+        mpHdFeature(NULL)
     {
-        
     }
     
     FaceRecognition::~FaceRecognition()
     {
-        
+        Reset();
+    }
+
+    void FaceRecognition::Reset()
+    {
+        if (mpHdFeature != NULL)
+        {
+            delete mpHdFeature;
+            mpHdFeature = NULL;
+        }
     }
     
     int FaceRecognition::AlignFace(const std::string& faceImgFiles, const std::string& alignedFilePath)
     {
         DebugLog << "FaceRecognition::AlignFace..." << std::endl;
-        std::string imgPath = faceImgFiles;
-        std::string::size_type pos = imgPath.rfind("/");
-        if (pos == std::string::npos)
-        {
-            pos = imgPath.rfind("\\");
-        }
-        imgPath.erase(pos);
+        std::string imgPath = MagicTool::CommonTools::GetPath(faceImgFiles);
         imgPath += "/";
         
         //read image and mark data
@@ -193,6 +199,149 @@ namespace MagicApp
         fileListOut.close();
         DebugLog << "Finished" << std::endl;
         
+        return MAGIC_NO_ERROR;
+    }
+
+    int FaceRecognition::LearnHighDimensionalFeature(const std::string& fileListName)
+    {
+        std::string filePath = MagicTool::CommonTools::GetPath(fileListName);
+        filePath += "/";
+
+        std::ifstream fileFin(fileListName);
+        int dataCount;
+        fileFin >> dataCount;
+        if (dataCount <= 0)
+        {
+            return MAGIC_INVALID_INPUT;
+        }
+        std::vector<std::string> imgFiles(dataCount);
+        std::vector<int> faceIds(dataCount);
+        std::vector<int> marksList;
+        int markCountPerImage;
+        for (int dataId = 0; dataId < dataCount; dataId++)
+        {
+            int faceId;
+            fileFin >> faceId;
+            faceIds.at(dataId) = faceId;
+            
+            std::string faceName;
+            fileFin >> faceName;
+            faceName = filePath + faceName;
+            imgFiles.at(dataId) = faceName;
+
+            std::string markName;
+            fileFin >> markName;
+            markName = filePath + markName;
+            std::ifstream markFin(markName);
+            markFin >> markCountPerImage;
+            if (dataId == 0)
+            {
+                marksList.reserve(dataCount * markCountPerImage * 2);
+            }
+            for (int markId = 0; markId < markCountPerImage; markId++)
+            {
+                double row, col;
+                markFin >> col >> row;
+                marksList.push_back(col);
+                marksList.push_back(row);
+            }
+            markFin.close();
+        }
+        fileFin.close();
+
+        if (mpHdFeature == NULL)
+        {
+            mpHdFeature = new MagicDIP::HighDimensionalFeature;
+        }
+        return mpHdFeature->Learn(imgFiles, marksList, markCountPerImage, faceIds);
+    }
+
+    int FaceRecognition::KMeansClusteringHighDimensionalFeature(const std::string& fileListName, const std::string& resPath)
+    {
+        std::string filePath = MagicTool::CommonTools::GetPath(fileListName);
+        filePath += "/";
+
+        std::ifstream fileFin(fileListName);
+        int dataCount;
+        fileFin >> dataCount;
+        if (dataCount <= 0)
+        {
+            return MAGIC_INVALID_INPUT;
+        }
+        dataCount /= 5;
+
+        std::vector<std::string> imgFiles(dataCount);
+        std::vector<double> features;
+        int featureDim = 0;
+        int clusterCount = 0;
+        int lastClusterId = -1;
+        if (mpHdFeature == NULL)
+        {
+            mpHdFeature = new MagicDIP::HighDimensionalFeature;
+        }
+        for (int dataId = 0; dataId < dataCount; dataId++)
+        {
+            int faceId;
+            fileFin >> faceId;
+            if (faceId != lastClusterId)
+            {
+                clusterCount++;
+                lastClusterId = faceId;
+            }
+            
+            std::string faceName;
+            fileFin >> faceName;
+            faceName = filePath + faceName;
+            imgFiles.at(dataId) = faceName;
+            cv::Mat img = cv::imread(faceName);
+
+            std::string markName;
+            fileFin >> markName;
+            markName = filePath + markName;
+            std::ifstream markFin(markName);
+            int markCount;
+            markFin >> markCount;
+            std::vector<int> marksList;
+            marksList.reserve(markCount * 2);
+            for (int markId = 0; markId < markCount; markId++)
+            {
+                double row, col;
+                markFin >> col >> row;
+                marksList.push_back(col);
+                marksList.push_back(row);
+            }
+            markFin.close();
+
+            std::vector<double> oneFaceFeature;
+            mpHdFeature->GetHighDimensionalFeature(img, marksList, oneFaceFeature);
+            if (dataId == 0)
+            {
+                featureDim = oneFaceFeature.size();
+                features.reserve(static_cast<long long>(featureDim) * dataCount);
+            }
+            for (std::vector<double>::iterator itr = oneFaceFeature.begin(); itr != oneFaceFeature.end(); itr++)
+            {
+                features.push_back(*itr);
+            }
+
+            DebugLog << "dataId: " << dataId << " clusterCount: " << clusterCount << " featureDim: " << featureDim << std::endl;
+        }
+        fileFin.close();
+
+        DebugLog << "KMeans clustring..." << std::endl;
+        std::vector<int> clusterRes;
+        MagicML::Clustering::KMeans(features, featureDim, clusterCount, clusterRes);
+        for (int dataId = 0; dataId < dataCount; dataId++)
+        {
+            std::stringstream ss;
+            ss << resPath << "/" << clusterRes.at(dataId) << "_" << dataId << ".jpg";
+            std::string outputName;
+            ss >> outputName;
+            cv::Mat img = cv::imread(imgFiles.at(dataId));
+            cv::imwrite(outputName, img);
+            img.release();
+        }
+
         return MAGIC_NO_ERROR;
     }
 }

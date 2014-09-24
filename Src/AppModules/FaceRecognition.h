@@ -4,24 +4,30 @@
 #include <string>
 #include <vector>
 
+namespace MagicDIP
+{
+    class HighDimensionalFeature;
+}
+
 namespace MagicApp
 {
     class FaceRecognition : public MagicApp::MagicObject
     {
     public:
-        enum RecognitionMethod
-        {
-            RM_Default
-        };
-        
         FaceRecognition();
         ~FaceRecognition();
-        
+        void Reset();
+
         //Preprocess face data
         int AlignFace(const std::string& faceImgFiles, const std::string& alignedFilePath);
+
+        //Learn face features
+        int LearnHighDimensionalFeature(const std::string& fileListName);
+
+        //Unsurpervised clustering high dimensional features
+        int KMeansClusteringHighDimensionalFeature(const std::string& fileListName, const std::string& resPath);
         
     private:
-        RecognitionMethod mRecognitionMethod;
-        
+        MagicDIP::HighDimensionalFeature* mpHdFeature;
     };
 }
