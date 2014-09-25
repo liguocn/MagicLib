@@ -26,6 +26,13 @@ namespace MagicApp
 
         //Unsurpervised clustering high dimensional features
         int KMeansClusteringHighDimensionalFeature(const std::string& fileListName, const std::string& resPath);
+
+        //Unsurpervised clustering pca compressed features
+        int KMeansClusteringPcaCompressedFeature(const std::string& fileListName, const std::string& resPath);
+
+    private:
+        int GetHighDimensionalFeature(const std::string& fileListName, std::vector<double>& features, int& featureDim, 
+            int& clusterCount, std::vector<std::string>& imgFiles); 
         
     private:
         MagicDIP::HighDimensionalFeature* mpHdFeature;

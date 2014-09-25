@@ -1,5 +1,6 @@
 #include "HighDimensionalFeature.h"
 #include "../Math/SparseMatrix.h"
+#include "../MachineLearning/PrincipalComponentAnalysis.h"
 #include "../Tool/ErrorCodes.h"
 #include "../Tool/LogSystem.h"
 
@@ -9,9 +10,10 @@ namespace MagicDIP
         mpProjectMat(NULL),
         mTargetDim(2000),
         mMultiScaleCount(4),
-        mMultiScaleValue(0.8),
+        mMultiScaleValue(0.75),
         mPatchSize(40),
-        mCellSize(10),
+        mCellSize(20),
+        mUniformPatternSize(0),
         mUniformPatternMap()
     {
         ConstructUniformPatternMap();
@@ -36,7 +38,8 @@ namespace MagicDIP
         }
         
         //Calculate high dimensional features
-        double* features = NULL;
+        std::vector<double> features;
+        int featureDim = 0;
         for (int dataId = 0; dataId < dataCount; dataId++)
         {
             cv::Mat img = cv::imread(imgFiles.at(dataId));
@@ -51,17 +54,54 @@ namespace MagicDIP
             std::vector<double> oneFaceFeature = CalFaceFeature(img, oneFaceMarks);
             if (dataId == 0)
             {
-                features = new double[dataCount * oneFaceFeature.size()];
+                featureDim = oneFaceFeature.size();
+                features.reserve(dataCount * featureDim);
                 DebugLog << "Allocate features memory" << std::endl;
             }
-            for (int markId = 0; markId < markCountPerImg * 2; markId++)
+            for (std::vector<double>::iterator itr = oneFaceFeature.begin(); itr != oneFaceFeature.end(); itr++)
             {
-                features[globalMarkStartId + markId] = oneFaceFeature.at(markId);
+                features.push_back(*itr);
             }
         }
-        
-        //Compress dimension
-        
+        if (featureDim == 0)
+        {
+            DebugLog << "Error: featureDim == 0" << std::endl;
+            Reset();
+            return MAGIC_INVALID_RESULT;
+        }
+
+        //Compress dimension using pca
+        MagicML::PrincipalComponentAnalysis pca;
+        int pcaDim;
+        int pcaRes = pca.Analyse(features, featureDim, 0.99, pcaDim);
+        if (pcaRes != MAGIC_NO_ERROR)
+        {
+            DebugLog << "PCA error code: " << pcaRes << std::endl;
+            Reset();
+            return pcaRes;
+        }
+        std::vector<double> pcaCompressedFeatures;
+        pcaCompressedFeatures.reserve(pcaDim * dataCount);
+        for (long long dataId = 0; dataId < dataCount; dataId++)
+        {
+            std::vector<double> oneFeature;
+            oneFeature.reserve(featureDim);
+            long long startFeatureIndex = dataId * featureDim;
+            long long endFeatureIndex = (dataId + 1) * featureDim;
+            for (long long featureIndex = startFeatureIndex; featureIndex < endFeatureIndex; featureIndex++)
+            {
+                oneFeature.push_back(features.at(featureIndex));
+            }
+            std::vector<double> compressedOneFeature = pca.Project(oneFeature);
+            for (int pcaIndex = 0; pcaIndex < pcaDim; pcaIndex++)
+            {
+                pcaCompressedFeatures.push_back(compressedOneFeature.at(pcaIndex));
+            }
+        }
+        //features.clear();
+
+        //Compress feature using lda
+
         return MAGIC_NO_ERROR;
     }
     
@@ -100,10 +140,34 @@ namespace MagicDIP
     void HighDimensionalFeature::ConstructUniformPatternMap(void)
     {
         mUniformPatternMap.resize(256);
-        for (int index = 0; index < 256; index++)
+        mUniformPatternSize = 1;
+        int maxFlapCount = 2;
+        for (unsigned int index = 0; index < 256; index++)
         {
-
+            unsigned int lastFlag = index & 1;
+            unsigned int indexCopy = index >> 1;
+            int flapNum = 0;
+            for (int bitId = 1; bitId <= 8; bitId++)
+            {
+                unsigned int curFlag = indexCopy & 1;
+                indexCopy = indexCopy >> 1;
+                if (lastFlag != curFlag)
+                {
+                    flapNum++;
+                }
+                lastFlag = curFlag;
+            }
+            if (flapNum > maxFlapCount)
+            {
+                mUniformPatternMap.at(index) = 0;
+            }
+            else
+            {
+                mUniformPatternMap.at(index) = mUniformPatternSize;
+                mUniformPatternSize++;
+            }
         }
+        DebugLog << "Uniform map size: " << mUniformPatternSize << std::endl;
     }
 
     std::vector<double> HighDimensionalFeature::CalFaceFeature(const cv::Mat& img, const std::vector<int>& marksList) const
@@ -111,7 +175,7 @@ namespace MagicDIP
         int markCount = marksList.size() / 2;
         int cellCount = mPatchSize * mPatchSize / (mCellSize * mCellSize);
         std::vector<double> features;
-        features.reserve(mMultiScaleCount * markCount * cellCount * 256);
+        features.reserve(mMultiScaleCount * markCount * cellCount * mUniformPatternSize);
         cv::Mat scaleImg = img.clone();
         std::vector<double> scaleMarksList;
         scaleMarksList.reserve(marksList.size());
@@ -151,6 +215,7 @@ namespace MagicDIP
         int patchStartRow = markRow - mPatchSize / 2;
         int patchStartCol = markCol - mPatchSize / 2;
         int cellPixelCount = mCellSize * mCellSize;
+        //double cellNonUniformValue = 0;
         for (int cellLineRow = 0; cellLineRow < cellLineCount; cellLineRow++)
         {
             for (int cellLineCol = 0; cellLineCol < cellLineCount; cellLineCol++)
@@ -159,22 +224,24 @@ namespace MagicDIP
                 int cellStartCol = patchStartCol + mCellSize * cellLineCol;
                 int cellEndRow = cellStartRow + mCellSize;
                 int cellEndCol = cellStartCol + mCellSize;
-                std::vector<int> lbpHistory(256, 0);
+                std::vector<int> lbpHistory(mUniformPatternSize, 0);
                 for (int pixelRow = cellStartRow; pixelRow < cellEndRow; pixelRow++)
                 {
                     for (int pixelCol = cellStartCol; pixelCol < cellEndCol; pixelCol++)
                     {
                         int lbpValue;
                         CalPixelLbpValue(img, pixelRow, pixelCol, lbpValue);
-                        lbpHistory.at(lbpValue)++;
+                        lbpHistory.at(mUniformPatternMap.at(lbpValue))++;
                     }
                 }
-                for (int lbpId = 0; lbpId < 256; lbpId++)
+                for (int lbpId = 0; lbpId < mUniformPatternSize; lbpId++)
                 {
                     features.push_back( double(lbpHistory.at(lbpId)) / cellPixelCount );
                 }
+                //cellNonUniformValue += double(lbpHistory.at(0)) / cellPixelCount;
             }
         }
+        //DebugLog << "Cell NonUniform Value: " << cellNonUniformValue / cellLineCount / cellLineCount << std::endl;
     }
 
     void HighDimensionalFeature::CalPixelLbpValue(const cv::Mat& img, int pixelRow, int pixelCol, int& lbpValue) const

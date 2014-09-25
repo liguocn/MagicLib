@@ -1,7 +1,8 @@
 #include "PrincipalComponentAnalysis.h"
 #include "Eigen/Eigenvalues"
-#include "Eigen/Dense"
 #include "../Tool/LogSystem.h"
+#include "../Tool/Profiler.h"
+#include "../Tool/ErrorCodes.h"
 
 namespace MagicML
 {
@@ -18,17 +19,19 @@ namespace MagicML
     {
     }
 
-    void PrincipalComponentAnalysis::Analyse(const std::vector<double>& data, int dataDim, int pcaDim)
+    int PrincipalComponentAnalysis::ComputePcaData(const std::vector<double>& data, int dataDim, Eigen::MatrixXd& mat)
     {
+        if (data.size() < dataDim || dataDim < 1 )
+        {
+            return MAGIC_INVALID_INPUT;
+        }
         Clear();
         mDataDim = dataDim;
-        mPcaDim = pcaDim;
         int dataCount = data.size() / dataDim;
-        DebugLog << "dataCount: " << dataCount << std::endl;
         mMeanVector = std::vector<double>(dataDim, 0.0);
-        for (int dataId = 0; dataId < dataCount; dataId++)
+        for (long long dataId = 0; dataId < dataCount; dataId++)
         {
-            int baseIndex = dataId * dataDim;
+            long long baseIndex = dataId * dataDim;
             for (int dim = 0; dim < dataDim; dim++)
             {
                 mMeanVector.at(dim) += data.at(baseIndex + dim);
@@ -38,7 +41,8 @@ namespace MagicML
         {
             mMeanVector.at(dim) /= dataCount;
         }
-        Eigen::MatrixXd mat(dataDim, dataDim);
+        //Eigen::MatrixXd mat(dataDim, dataDim);
+        double emptyStartTime = MagicTool::Profiler::GetTime();
         for (int rid = 0; rid < dataDim; rid++)
         {
             for (int cid = 0; cid < dataDim; cid++)
@@ -46,42 +50,131 @@ namespace MagicML
                 mat(rid, cid) = 0.0;
             }
         }
+        DebugLog << "pca calculate deltaData: " << MagicTool::Profiler::GetTime() - emptyStartTime << std::endl;
         std::vector<double> deltaData(dataDim);
-        for (int dataId = 0; dataId < dataCount; dataId++)
+        for (long long dataId = 0; dataId < dataCount; dataId++)
         {
-            int baseIndex = dataId * dataDim;
+            double startTime = MagicTool::Profiler::GetTime();
+            long long baseIndex = dataId * dataDim;
             for (int dim = 0; dim < dataDim; dim++)
             {
                 deltaData.at(dim) = data.at(baseIndex + dim) - mMeanVector.at(dim);
             }
             for (int rid = 0; rid < dataDim; rid++)
             {
-                for (int cid = 0; cid < dataDim; cid++)
+                for (int cid = rid; cid < dataDim; cid++)
                 {
-                    mat(rid, cid) += ( deltaData.at(rid) * deltaData.at(cid) );
+                    double dTemp = deltaData.at(rid) * deltaData.at(cid);
+                    mat(rid, cid) += dTemp;
                 }
+            }
+            DebugLog << "pca dataId: " << dataId << " time: " << MagicTool::Profiler::GetTime() - startTime << std::endl;
+        }
+        for (int rid = 0; rid < dataDim; rid++)
+        {
+            for (int cid = 0; cid < rid; cid++)
+            {
+                mat(rid, cid) = mat(cid, rid);
             }
         }
         mat = mat / dataCount;
+
+        return MAGIC_NO_ERROR;
+    }
+
+    int PrincipalComponentAnalysis::Analyse(const std::vector<double>& data, int dataDim, int pcaDim)
+    { 
+        Eigen::MatrixXd mat(dataDim, dataDim);
+        int res = ComputePcaData(data, dataDim, mat);
+        if (res != MAGIC_NO_ERROR)
+        {
+            Clear();
+            return res;
+        }
+        DebugLog << "pca EigenSoler..." << std::endl;
         Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(mat);
+        DebugLog << "              finished" << std::endl;
+        
+        mPcaDim = pcaDim;
         mEigenValues.resize(pcaDim);
         mEigenVectors.resize(pcaDim * dataDim);
-        for (int pcaId = 0; pcaId < pcaDim; pcaId++)
+        for (int pcaId = 0; pcaId < dataDim; pcaId++)
+        {
+            DebugLog << "pca eigen value " << pcaId << ": " << es.eigenvalues()(dataDim - 1 - pcaId) << std::endl;
+        } 
+        for (long long pcaId = 0; pcaId < pcaDim; pcaId++)
         {
             mEigenValues.at(pcaId) = es.eigenvalues()(dataDim - 1 - pcaId);
             Eigen::VectorXd eigVec = es.eigenvectors().col(dataDim - 1 - pcaId);
-            int baseIndex = pcaId * dataDim;
+            long long baseIndex = pcaId * dataDim;
             for (int dim = 0; dim < dataDim; dim++)
             {
                 mEigenVectors.at(baseIndex + dim) = eigVec(dim);
             }
         }
+
+        return MAGIC_NO_ERROR;
+    }
+
+    int PrincipalComponentAnalysis::Analyse(const std::vector<double>& data, int dataDim, double pcaPercentage, int& pcaDim)
+    {
+        Eigen::MatrixXd mat(dataDim, dataDim);
+        int res = ComputePcaData(data, dataDim, mat);
+        if (res != MAGIC_NO_ERROR)
+        {
+            Clear();
+            return res;
+        }
+        DebugLog << "pca EigenSoler..." << std::endl;
+        Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(mat);
+        DebugLog << "              finished" << std::endl;
+
+        double eigenValueSum = 0;
+        for (int pcaId = 0; pcaId < dataDim; pcaId++)
+        {
+            eigenValueSum += es.eigenvalues()(pcaId);
+        }
+        double eigenValueSumFlag = eigenValueSum * pcaPercentage;
+        double eigenValueAcum = 0;
+        pcaDim = -1;
+        for (int pcaId = 0; pcaId < dataDim; pcaId++)
+        {
+            eigenValueAcum += es.eigenvalues()(dataDim - 1 - pcaId);
+            if (eigenValueAcum > eigenValueSumFlag)
+            {
+                mPcaDim = pcaId + 1;
+                pcaDim = mPcaDim;
+                break;
+            }
+        }
+        if (pcaDim == -1)
+        {
+            DebugLog << "Error: pcaDim == -1 " << std::endl;
+        }
+        mEigenValues.resize(pcaDim);
+        mEigenVectors.resize(pcaDim * dataDim);
+        for (int pcaId = 0; pcaId < pcaDim; pcaId++)
+        {
+            DebugLog << "pca eigen value " << pcaId << ": " << es.eigenvalues()(dataDim - 1 - pcaId) << std::endl;
+        } 
+        for (long long pcaId = 0; pcaId < pcaDim; pcaId++)
+        {
+            mEigenValues.at(pcaId) = es.eigenvalues()(dataDim - 1 - pcaId);
+            Eigen::VectorXd eigVec = es.eigenvectors().col(dataDim - 1 - pcaId);
+            long long baseIndex = pcaId * dataDim;
+            for (int dim = 0; dim < dataDim; dim++)
+            {
+                mEigenVectors.at(baseIndex + dim) = eigVec(dim);
+            }
+        }
+
+        return MAGIC_NO_ERROR;
     }
 
     std::vector<double> PrincipalComponentAnalysis::GetEigenVector(int k)
     {
         std::vector<double> eigenVec(mDataDim);
-        int baseIndex = mDataDim * k;
+        long long baseIndex = static_cast<long long>(mDataDim) * k;
         for (int did = 0; did < mDataDim; did++)
         {
             eigenVec.at(did) = mEigenVectors.at(baseIndex + did);
@@ -117,10 +210,10 @@ namespace MagicML
             projectVec.at(dim) = mMeanVector.at(dim);
             deltaVec.at(dim) = data.at(dim) - mMeanVector.at(dim);
         }
-        for (int pcaId = 0; pcaId < mPcaDim; pcaId++)
+        for (long long pcaId = 0; pcaId < mPcaDim; pcaId++)
         {
             double coef = 0.0;
-            int baseIndex = pcaId * mDataDim;
+            long long baseIndex = pcaId * mDataDim;
             for (int dim = 0; dim < mDataDim; dim++)
             {
                 coef += deltaVec.at(dim) * mEigenVectors.at(baseIndex + dim);
@@ -142,10 +235,10 @@ namespace MagicML
             projectVec.at(dim) = mMeanVector.at(dim);
             deltaVec.at(dim) = data.at(dim) - mMeanVector.at(dim);
         }
-        for (int pcaId = 0; pcaId < mPcaDim; pcaId++)
+        for (long long pcaId = 0; pcaId < mPcaDim; pcaId++)
         {
             double coef = 0.0;
-            int baseIndex = pcaId * mDataDim;
+            long long baseIndex = pcaId * mDataDim;
             for (int dim = 0; dim < mDataDim; dim++)
             {
                 coef += deltaVec.at(dim) * mEigenVectors.at(baseIndex + dim);
@@ -168,10 +261,10 @@ namespace MagicML
         int solverDim = mPcaDim > dataDim ? dataDim : mPcaDim;
         Eigen::MatrixXd matA(dataDim, solverDim);
         Eigen::VectorXd vecB(dataDim, 1);
-        for (int rowId = 0; rowId < dataDim; rowId++)
+        for (long long rowId = 0; rowId < dataDim; rowId++)
         {
             int dataId = dataIndex.at(rowId);
-            for (int colId = 0; colId < solverDim; colId++)
+            for (long long colId = 0; colId < solverDim; colId++)
             {
                 matA(rowId, colId) = mEigenVectors.at(colId * mDataDim + dataId);
             }
@@ -188,7 +281,7 @@ namespace MagicML
         {
             double maxCoef = truncateCoef * sqrt(mEigenValues.at(pcaId));
             double coef = res(pcaId) > maxCoef ? maxCoef : (res(pcaId) < -maxCoef ? -maxCoef : res(pcaId));
-            int baseIndex = pcaId * mDataDim;
+            long long baseIndex = pcaId * mDataDim;
             for (int dimId = 0; dimId < mDataDim; dimId++)
             {
                 fitRes.at(dimId) += mEigenVectors.at(baseIndex + dimId) * coef;
@@ -210,9 +303,9 @@ namespace MagicML
             fin >> mEigenValues.at(vid);
         }
 
-        int vSize = mDataDim * mPcaDim;
+        long long vSize = mDataDim * mPcaDim;
         mEigenVectors.resize(vSize);
-        for (int vid = 0; vid < vSize; vid++)
+        for (long long vid = 0; vid < vSize; vid++)
         {
             fin >> mEigenVectors.at(vid);
         }
@@ -235,8 +328,8 @@ namespace MagicML
             fout << mEigenValues.at(vid) << std::endl;
         }
 
-        int vSize = mDataDim * mPcaDim;
-        for (int vid = 0; vid < vSize; vid++)
+        long long vSize = mDataDim * mPcaDim;
+        for (long long vid = 0; vid < vSize; vid++)
         {
             fout << mEigenVectors.at(vid) << " ";
         }

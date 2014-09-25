@@ -294,12 +294,12 @@ namespace MagicML
             BBoxMin.at(did) = sourceData.at(did);
         }
         int dataCount = sourceData.size() / dim;
-        for (int sid = 1; sid < dataCount; sid++)
+        for (long long sid = 1; sid < dataCount; sid++)
         {
-            int sourceBase = sid * dim;
+            long long sourceBase = sid * dim;
             for (int did = 0; did < dim; did++)
             {
-                int srcIdx = sourceBase + did;
+                long long srcIdx = sourceBase + did;
                 if (sourceData.at(srcIdx) > BBoxMax.at(did))
                 {
                     BBoxMax.at(did) = sourceData.at(srcIdx);
@@ -346,22 +346,22 @@ namespace MagicML
             //Find new centers
             std::vector<double> newCenterData(dim * k, 0);
             std::vector<int> clusterCount(k, 0);
-            for (int sid = 0; sid < dataCount; sid++)
+            for (long long sid = 0; sid < dataCount; sid++)
             {
-                int sourceBase = sid * dim;
-                int centerId = clusterRes.at(sid);
-                int centerBase = centerId * dim;
+                long long sourceBase = sid * dim;
+                long long centerId = clusterRes.at(sid);
+                long long centerBase = centerId * dim;
                 for (int did = 0; did < dim; did++)
                 {
                     newCenterData.at(centerBase + did) += sourceData.at(sourceBase + did);
                 }
                 clusterCount.at(centerId)++;
             }
-            for (int cid = 0; cid < k; cid++)
+            for (long long cid = 0; cid < k; cid++)
             {
                 if (clusterCount.at(cid) > 0)
                 {
-                    int centerBase = cid * dim;
+                    long long centerBase = cid * dim;
                     for (int did = 0; did < dim; did++)
                     {
                         newCenterData.at(centerBase + did) /= clusterCount.at(cid);
@@ -371,10 +371,10 @@ namespace MagicML
 
             //Judge whether to stop
             double maxDif = 0;
-            for (int cid = 0; cid < k; cid++)
+            for (long long cid = 0; cid < k; cid++)
             {
                 double dif = 0;
-                int baseIndex = cid * dim;
+                long long baseIndex = cid * dim;
                 for (int did = 0; did < dim; did++)
                 {
                     double dTemp = newCenterData.at(baseIndex + did) - centerData.at(baseIndex + did);
@@ -386,16 +386,12 @@ namespace MagicML
                 }
             }
             maxDif = sqrt(maxDif);
+            DebugLog << "KMeans iterate " << iterId << ": maxDif: " << maxDif << " stopEpsilon: " << stopEpsilon << std::endl;
             if (maxDif < stopEpsilon)
             {
                 DebugLog << "K-Means lucky break at " << iterId << std::endl;
                 break;
             }
-            //else
-            //{
-            //    DebugLog << "Iter" << iterId << ": " << maxDif << " stopEpsilon: " << stopEpsilon << std::endl;
-            //}
-            //Update centerData
             centerData = newCenterData;
         }
     }
@@ -534,12 +530,12 @@ namespace MagicML
         sampleFlag.at(0) = true;
         sampleIndex.at(0) = 0;
         std::vector<double> minDist(sourceCount, 1.0e100);
-        int curIndex = 0;
+        long long curIndex = 0;
         for (int sid = 1; sid < k; ++sid)
         {
             double maxDist = -1;
             int pos = -1;
-            int baseCur = curIndex * dim;
+            long long baseCur = curIndex * dim;
             for (int vid = 0; vid < sourceCount; ++vid)
             {
                 if (sampleFlag.at(vid))
@@ -569,10 +565,10 @@ namespace MagicML
         }
         seedData.clear();
         seedData.resize(k * dim);
-        for (int sid = 0; sid < k; sid++)
+        for (long long sid = 0; sid < k; sid++)
         {
-            int baseSource = sampleIndex.at(sid) * dim;
-            int baseSeed = sid * dim;
+            long long baseSource = static_cast<long long>(sampleIndex.at(sid)) * dim;
+            long long baseSeed = sid * dim;
             for (int did = 0; did < dim; did++)
             {
                 seedData.at(baseSeed + did) = sourceData.at(baseSource + did);
@@ -583,8 +579,8 @@ namespace MagicML
     double Clustering::KMeansDistance(const std::vector<double>& sourcedata, int dim, int dataIndex, const std::vector<double>& centerData, int centerIndex)
     {
         double dist = 0;
-        int sourceBase = dataIndex * dim;
-        int centerBase = centerIndex * dim;
+        long long sourceBase = static_cast<long long>(dataIndex) * dim;
+        long long centerBase = static_cast<long long>(centerIndex) * dim;
         for (int did = 0; did < dim; did++)
         {
             double dTemp = sourcedata.at(sourceBase + did) - centerData.at(centerBase + did);

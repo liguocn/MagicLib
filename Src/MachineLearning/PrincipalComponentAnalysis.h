@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <string>
+#include "Eigen/Dense"
 
 namespace MagicML
 {
@@ -10,7 +11,8 @@ namespace MagicML
         PrincipalComponentAnalysis();
         ~PrincipalComponentAnalysis();
 
-        void Analyse(const std::vector<double>& data, int dataDim, int pcaDim);
+        int Analyse(const std::vector<double>& data, int dataDim, int pcaDim);
+        int Analyse(const std::vector<double>& data, int dataDim, double pcaPercentage, int& pcaDim);
         std::vector<double> GetEigenVector(int k);
         double GetEigenValue(int k);
         std::vector<double> GetMeanVector(void);
@@ -22,6 +24,7 @@ namespace MagicML
 
     private:
         void Clear(void);
+        int ComputePcaData(const std::vector<double>& data, int dataDim, Eigen::MatrixXd& mat);
 
     private:
         int mDataDim;

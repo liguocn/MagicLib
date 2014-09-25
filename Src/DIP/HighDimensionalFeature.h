@@ -39,6 +39,7 @@ namespace MagicDIP
         int mPatchSize;
         int mCellSize;
         //cache
+        int mUniformPatternSize;
         std::vector<int> mUniformPatternMap;
     };
 }
