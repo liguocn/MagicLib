@@ -2,13 +2,14 @@
 #include "../Math/SparseMatrix.h"
 #include "../MachineLearning/PrincipalComponentAnalysis.h"
 #include "../MachineLearning/LinearDiscriminantAnalysis.h"
+#include "../MachineLearning/RotatedSparseRegression.h"
 #include "../Tool/ErrorCodes.h"
 #include "../Tool/LogSystem.h"
 
 namespace MagicDIP
 {
     HighDimensionalFeature::HighDimensionalFeature() :
-        mpProjectMat(NULL),
+        mpRSRegression(NULL),
         mTargetDim(2000),
         mMultiScaleCount(1),
         mMultiScaleValue(0.75),
@@ -134,6 +135,18 @@ namespace MagicDIP
         pcaCompressedFeatures.clear();
 
         //Learn Projection Matrix
+        if (mpRSRegression == NULL)
+        {
+            mpRSRegression = new MagicML::RotatedSparseRegression;
+        }
+        mpRSRegression->Reset();
+        int regRes = mpRSRegression->Learn(features, ldaCompressedFeatures, dataCount);
+        if (regRes != MAGIC_NO_ERROR)
+        {
+            DebugLog << "RSRegression error code: " << regRes << std::endl;
+            Reset();
+            return regRes;
+        }
 
         return MAGIC_NO_ERROR;
     }
@@ -163,10 +176,10 @@ namespace MagicDIP
     
     void HighDimensionalFeature::Reset(void)
     {
-        if (mpProjectMat != NULL)
+        if (mpRSRegression != NULL)
         {
-            delete mpProjectMat;
-            mpProjectMat = NULL;
+            delete mpRSRegression;
+            mpRSRegression = NULL;
         }
     }
 

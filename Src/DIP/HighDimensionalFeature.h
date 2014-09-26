@@ -3,9 +3,9 @@
 #include <string>
 #include "opencv2/opencv.hpp"
 
-namespace MagicMath
+namespace MagicML
 {
-    class SparseMatrix;
+    class RotatedSparseRegression;
 }
 
 namespace MagicDIP
@@ -31,7 +31,7 @@ namespace MagicDIP
         void CalPixelLbpValue(const cv::Mat& img, int pixelRow, int pixelCol, int& lbpValue) const;
         
     private:
-        MagicMath::SparseMatrix* mpProjectMat;
+        MagicML::RotatedSparseRegression* mpRSRegression;
         //Algorithm parameters
         int mTargetDim;
         int mMultiScaleCount;
