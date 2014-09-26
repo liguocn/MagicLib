@@ -1,6 +1,7 @@
 #include "HighDimensionalFeature.h"
 #include "../Math/SparseMatrix.h"
 #include "../MachineLearning/PrincipalComponentAnalysis.h"
+#include "../MachineLearning/LinearDiscriminantAnalysis.h"
 #include "../Tool/ErrorCodes.h"
 #include "../Tool/LogSystem.h"
 
@@ -9,10 +10,10 @@ namespace MagicDIP
     HighDimensionalFeature::HighDimensionalFeature() :
         mpProjectMat(NULL),
         mTargetDim(2000),
-        mMultiScaleCount(4),
+        mMultiScaleCount(1),
         mMultiScaleValue(0.75),
         mPatchSize(40),
-        mCellSize(20),
+        mCellSize(40),
         mUniformPatternSize(0),
         mUniformPatternMap()
     {
@@ -98,9 +99,41 @@ namespace MagicDIP
                 pcaCompressedFeatures.push_back(compressedOneFeature.at(pcaIndex));
             }
         }
+        pca.Clear();
         //features.clear();
 
         //Compress feature using lda
+        int ldaDim;
+        MagicML::LinearDiscriminantAnalysis lda;
+        int ldaRes = lda.Analyse(pcaCompressedFeatures, faceIds, 0.99, ldaDim);
+        if (ldaRes != MAGIC_NO_ERROR)
+        {
+            DebugLog << "LDA error code: " << ldaRes << std::endl;
+            Reset();
+            return ldaRes;
+        }
+        std::vector<double> ldaCompressedFeatures;
+        ldaCompressedFeatures.reserve(ldaDim * dataCount);
+        for (long long dataId = 0; dataId < dataCount; dataId++)
+        {
+            std::vector<double> oneFeature;
+            oneFeature.reserve(pcaDim);
+            long long startFeatureIndex = dataId * pcaDim;
+            long long endFeatureIndex = (dataId + 1) * pcaDim;
+            for (long long featureIndex = startFeatureIndex; featureIndex < endFeatureIndex; featureIndex++)
+            {
+                oneFeature.push_back(pcaCompressedFeatures.at(featureIndex));
+            }
+            std::vector<double> ldaOneFeature = lda.Project(oneFeature);
+            for (int ldaIndex = 0; ldaIndex < ldaDim; ldaIndex++)
+            {
+                ldaCompressedFeatures.push_back(ldaOneFeature.at(ldaIndex));
+            }
+        }
+        lda.Reset();
+        pcaCompressedFeatures.clear();
+
+        //Learn Projection Matrix
 
         return MAGIC_NO_ERROR;
     }

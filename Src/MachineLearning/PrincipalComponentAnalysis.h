@@ -21,9 +21,9 @@ namespace MagicML
         std::vector<double> TruncateFitting(const std::vector<double>& data, const std::vector<int>& dataIndex, double truncateCoef);
         void Load(const std::string& fileName);
         void Save(const std::string& fileName);
+        void Clear(void);
 
     private:
-        void Clear(void);
         int ComputePcaData(const std::vector<double>& data, int dataDim, Eigen::MatrixXd& mat);
 
     private:

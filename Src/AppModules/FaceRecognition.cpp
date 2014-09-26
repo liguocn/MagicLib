@@ -6,6 +6,7 @@
 #include "../DIP/HighDimensionalFeature.h"
 #include "../MachineLearning/Clustering.h"
 #include "../MachineLearning/PrincipalComponentAnalysis.h"
+#include "../MachineLearning/LinearDiscriminantAnalysis.h"
 
 namespace MagicApp
 {
@@ -258,7 +259,7 @@ namespace MagicApp
     }
 
     int FaceRecognition::GetHighDimensionalFeature(const std::string& fileListName, std::vector<double>& features, int& featureDim, 
-            int& clusterCount, std::vector<std::string>& imgFiles)
+            int& clusterCount, std::vector<std::string>& imgFiles, std::vector<int>& faceIdList)
     {
         std::string filePath = MagicTool::CommonTools::GetPath(fileListName);
         filePath += "/";
@@ -274,6 +275,8 @@ namespace MagicApp
         features.clear();
         imgFiles.clear();
         imgFiles.resize(dataCount);
+        faceIdList.clear();
+        faceIdList.resize(dataCount);
         clusterCount = 0;
         int lastClusterId = -1;
         if (mpHdFeature == NULL)
@@ -284,6 +287,7 @@ namespace MagicApp
         {
             int faceId;
             fileFin >> faceId;
+            faceIdList.at(dataId) = faceId;
             if (faceId != lastClusterId)
             {
                 clusterCount++;
@@ -338,7 +342,8 @@ namespace MagicApp
         int featureDim;
         int clusterCount;
         std::vector<std::string> imgFiles;
-        int res = GetHighDimensionalFeature(fileListName, features, featureDim, clusterCount, imgFiles);
+        std::vector<int> faceIdList;
+        int res = GetHighDimensionalFeature(fileListName, features, featureDim, clusterCount, imgFiles, faceIdList);
         if (res != MAGIC_NO_ERROR)
         {
             return res;
@@ -368,7 +373,8 @@ namespace MagicApp
         int featureDim;
         int clusterCount;
         std::vector<std::string> imgFiles;
-        int res = GetHighDimensionalFeature(fileListName, features, featureDim, clusterCount, imgFiles);
+        std::vector<int> faceIdList;
+        int res = GetHighDimensionalFeature(fileListName, features, featureDim, clusterCount, imgFiles, faceIdList);
         if (res != MAGIC_NO_ERROR)
         {
             return res;
@@ -406,6 +412,100 @@ namespace MagicApp
         DebugLog << "KMeans clustring: featureDim: " << pcaDim << " clusterCount: " << clusterCount << std::endl;
         std::vector<int> clusterRes;
         MagicML::Clustering::KMeans(compressedFeatures, pcaDim, clusterCount, clusterRes);
+        for (int dataId = 0; dataId < dataCount; dataId++)
+        {
+            std::stringstream ss;
+            ss << resPath << "/" << clusterRes.at(dataId) << "_" << dataId << ".jpg";
+            std::string outputName;
+            ss >> outputName;
+            cv::Mat img = cv::imread(imgFiles.at(dataId));
+            cv::imwrite(outputName, img);
+            img.release();
+        }
+
+        return MAGIC_NO_ERROR;
+    }
+
+    int FaceRecognition::KMeansClusteringLdaCompressedFeature(const std::string& fileListName, const std::string& resPath)
+    {
+        std::vector<double> features;
+        int featureDim;
+        int clusterCount;
+        std::vector<std::string> imgFiles;
+        std::vector<int> faceIdList;
+        int res = GetHighDimensionalFeature(fileListName, features, featureDim, clusterCount, imgFiles, faceIdList);
+        if (res != MAGIC_NO_ERROR)
+        {
+            return res;
+        }
+
+        DebugLog << "PCA Compressing: featureDim: " << featureDim << " clusterCount: " << clusterCount << std::endl;
+        int dataCount = imgFiles.size();
+        /*int pcaDim;
+        MagicML::PrincipalComponentAnalysis pca;
+        res = pca.Analyse(features, featureDim, 0.99, pcaDim);
+        if (res != MAGIC_NO_ERROR)
+        {
+            return res;
+        }
+        std::vector<double> compressedFeatures;
+        compressedFeatures.reserve(pcaDim * dataCount);
+        for (long long dataId = 0; dataId < dataCount; dataId++)
+        {
+            std::vector<double> oneFeature;
+            oneFeature.reserve(featureDim);
+            long long startFeatureIndex = dataId * featureDim;
+            long long endFeatureIndex = (dataId + 1) * featureDim;
+            for (long long featureIndex = startFeatureIndex; featureIndex < endFeatureIndex; featureIndex++)
+            {
+                oneFeature.push_back(features.at(featureIndex));
+            }
+            std::vector<double> compressedOneFeature = pca.Project(oneFeature);
+            for (int pcaIndex = 0; pcaIndex < pcaDim; pcaIndex++)
+            {
+                compressedFeatures.push_back(compressedOneFeature.at(pcaIndex));
+            }
+        }
+        features.clear();
+        pca.Clear();*/
+        std::vector<double> compressedFeatures = features;
+        features.clear();
+        int pcaDim = featureDim;
+
+        DebugLog << "Lda compressing: pcaDim: " << pcaDim << std::endl;
+        int ldaDim;
+        //int ldaDim = clusterCount - 1;
+        MagicML::LinearDiscriminantAnalysis lda;
+        res = lda.Analyse(compressedFeatures, faceIdList, 0.99, ldaDim);
+        //res = lda.Analyse(compressedFeatures, faceIdList, ldaDim);
+        if (res != MAGIC_NO_ERROR)
+        {
+            return res;
+        }
+        std::vector<double> ldaFeatures;
+        ldaFeatures.reserve(ldaDim * dataCount);
+        for (long long dataId = 0; dataId < dataCount; dataId++)
+        {
+            std::vector<double> oneFeature;
+            oneFeature.reserve(pcaDim);
+            long long startFeatureIndex = dataId * pcaDim;
+            long long endFeatureIndex = (dataId + 1) * pcaDim;
+            for (long long featureIndex = startFeatureIndex; featureIndex < endFeatureIndex; featureIndex++)
+            {
+                oneFeature.push_back(compressedFeatures.at(featureIndex));
+            }
+            std::vector<double> ldaOneFeature = lda.Project(oneFeature);
+            for (int ldaIndex = 0; ldaIndex < ldaDim; ldaIndex++)
+            {
+                ldaFeatures.push_back(ldaOneFeature.at(ldaIndex));
+            }
+        }
+        lda.Reset();
+        compressedFeatures.clear();
+
+        DebugLog << "KMeans clustring: featureDim: " << ldaDim << " clusterCount: " << clusterCount << std::endl;
+        std::vector<int> clusterRes;
+        MagicML::Clustering::KMeans(ldaFeatures, ldaDim, clusterCount, clusterRes);
         for (int dataId = 0; dataId < dataCount; dataId++)
         {
             std::stringstream ss;

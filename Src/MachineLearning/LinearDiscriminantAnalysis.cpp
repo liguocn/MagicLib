@@ -26,8 +26,9 @@ namespace MagicML
         mLdaDim = 0;
         mLdaVectors.clear();
     }
-    
-    int LinearDiscriminantAnalysis::Analyse(const std::vector<double>& dataX, const std::vector<int>& dataY, int ldaDim)
+
+    int LinearDiscriminantAnalysis::ConcreteAnalyse(const std::vector<double>& dataX, const std::vector<int>& dataY, 
+            double ldaPercentage, int& ldaDim, bool isPercentage)
     {
         Reset();
         int dataCount = dataY.size();
@@ -36,7 +37,7 @@ namespace MagicML
             return MAGIC_EMPTY_INPUT;
         }
         mDataDim = dataX.size() / dataCount;
-        mLdaDim = ldaDim;
+        //mLdaDim = ldaDim;
         if (mDataDim * dataY.size() != dataX.size())
         {
             return MAGIC_INVALID_INPUT;
@@ -47,7 +48,7 @@ namespace MagicML
             catogeryMap[dataY.at(dataId)].push_back(dataId);
         }
         int catCount = catogeryMap.size();
-        if (ldaDim > catCount - 1)
+        if (!isPercentage && ldaDim > catCount - 1)
         {
             return MAGIC_INVALID_INPUT;
         }
@@ -66,10 +67,10 @@ namespace MagicML
         int catId = 0;
         for (std::map<int, std::vector<int> >::iterator mapItr = catogeryMap.begin(); mapItr != catogeryMap.end(); mapItr++)
         {
-            int meanBaseId = catId * mDataDim;
+            long long meanBaseId = catId * mDataDim;
             for (std::vector<int>::iterator vecItr = mapItr->second.begin(); vecItr != mapItr->second.end(); vecItr++)
             {
-                int vecBaseIndex = *vecItr * mDataDim;
+                long long vecBaseIndex = *vecItr * mDataDim;
                 for (int did = 0; did < mDataDim; did++)
                 {
                     meanVecList.at(meanBaseId + did) += dataX.at(vecBaseIndex + did);
@@ -83,7 +84,7 @@ namespace MagicML
             std::vector<double> deltaData(mDataDim);
             for (std::vector<int>::iterator vecItr = mapItr->second.begin(); vecItr != mapItr->second.end(); vecItr++)
             {
-                int vecBaseIndex = *vecItr * mDataDim;
+                long long vecBaseIndex = *vecItr * mDataDim;
                 for (int did = 0; did < mDataDim; did++)
                 {
                     deltaData.at(did) = dataX.at(vecBaseIndex + did) - meanVecList.at(meanBaseId + did);
@@ -109,7 +110,7 @@ namespace MagicML
         std::vector<double> totalMeanVec(mDataDim, 0);
         for (int catoId = 0; catoId < catCount; catoId++)
         {
-            int meanBaseId = catoId * mDataDim;
+            long long meanBaseId = catoId * mDataDim;
             for (int did = 0; did < mDataDim; did++)
             {
                 totalMeanVec.at(did) += meanVecList.at(meanBaseId + did) * catoNumList.at(catoId);
@@ -122,7 +123,7 @@ namespace MagicML
         std::vector<double> meanDeltaData(mDataDim);
         for (int catoId = 0; catoId < catCount; catoId++)
         {
-            int meanBaseId = catoId * mDataDim;
+            long long meanBaseId = catoId * mDataDim;
             for (int did = 0; did < mDataDim; did++)
             {
                 meanDeltaData.at(did) = meanVecList.at(meanBaseId + did) - totalMeanVec.at(did);
@@ -146,7 +147,9 @@ namespace MagicML
         {
             sortIndex.at(dataId) = dataId;
         }
-        for (int sortId = 0; sortId < mLdaDim; sortId++)
+        int sortCount = mDataDim < (catCount - 1) ? mDataDim : (catCount - 1);
+        double eigenValueSum = 0;
+        for (int sortId = 0; sortId < sortCount; sortId++)
         {
             int maxId = sortId;
             double maxV = -1;
@@ -158,9 +161,30 @@ namespace MagicML
                     maxId = dataId;
                 }
             }
+            DebugLog << "lda eigenValue: " << maxV << std::endl;
+            eigenValueSum += maxV;
             int nTemp = sortIndex.at(sortId);
             sortIndex.at(sortId) = sortIndex.at(maxId);
             sortIndex.at(maxId) = nTemp;
+        }
+        if (isPercentage)
+        {
+            double eigenValueFlag = eigenValueSum * ldaPercentage;
+            double eigenValueAcum = 0;
+            for (int sortId = 0; sortId < sortCount; sortId++)
+            {
+                eigenValueAcum += es.eigenvalues()(sortIndex.at(sortId)).real();
+                if (eigenValueAcum > eigenValueFlag)
+                {
+                    mLdaDim = sortId + 1;
+                    ldaDim = mLdaDim;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            mLdaDim = ldaDim;
         }
         mLdaVectors.resize(mLdaDim * mDataDim);
         for (int ldaId = 0; ldaId < mLdaDim; ldaId++)
@@ -176,10 +200,20 @@ namespace MagicML
         return MAGIC_NO_ERROR;
     }
     
+    int LinearDiscriminantAnalysis::Analyse(const std::vector<double>& dataX, const std::vector<int>& dataY, int ldaDim)
+    {
+        return ConcreteAnalyse(dataX, dataY, 0, ldaDim, false);
+    }
+    
+    int LinearDiscriminantAnalysis::Analyse(const std::vector<double>& dataX, const std::vector<int>& dataY, double ldaPercentage, int& ldaDim)
+    {
+        return ConcreteAnalyse(dataX, dataY, ldaPercentage, ldaDim, true);
+    }
+
     std::vector<double> LinearDiscriminantAnalysis::GetLdaVector(int k) const
     {
         std::vector<double> ldaVec(mDataDim);
-        int baseIndex = mDataDim * k;
+        long long baseIndex = mDataDim * k;
         for (int did = 0; did < mDataDim; did++)
         {
             ldaVec.at(did) = mLdaVectors.at(baseIndex + did);
@@ -192,7 +226,7 @@ namespace MagicML
         std::vector<double> projVec(mLdaDim, 0);
         for (int ldaId = 0; ldaId < mLdaDim; ldaId++)
         {
-            int baseIndex = ldaId * mDataDim;
+            long long baseIndex = ldaId * mDataDim;
             for (int did = 0; did < mDataDim; did++)
             {
                 projVec.at(ldaId) += data.at(did) * mLdaVectors.at(baseIndex + did);
