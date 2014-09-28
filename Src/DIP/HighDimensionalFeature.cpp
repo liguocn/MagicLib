@@ -140,7 +140,8 @@ namespace MagicDIP
             mpRSRegression = new MagicML::RotatedSparseRegression;
         }
         mpRSRegression->Reset();
-        int regRes = mpRSRegression->Learn(features, ldaCompressedFeatures, dataCount);
+        double lamda = 10;
+        int regRes = mpRSRegression->Learn(features, ldaCompressedFeatures, dataCount, lamda);
         if (regRes != MAGIC_NO_ERROR)
         {
             DebugLog << "RSRegression error code: " << regRes << std::endl;
