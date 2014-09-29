@@ -47,7 +47,7 @@ namespace MagicML
         int maxIterCount = 100;
         for (int iterId = 0; iterId < maxIterCount; iterId++)
         {
-            int vecBRes = CalVectorBList(dataX, rotatedDataY, dataCount, lamda, vecBList);
+            int vecBRes = CalVectorBList(dataX, rotatedDataY, dataCount, lamda, iterId != 0, vecBList);
             if (vecBRes != MAGIC_NO_ERROR)
             {
                 Reset();
@@ -177,17 +177,176 @@ namespace MagicML
         return MAGIC_NO_ERROR;
     }
 
-    int RotatedSparseRegression::CalVectorBList(const std::vector<double>& dataX, const std::vector<double>& dataY, int dataCount, 
-            double lamda, std::vector<double>& vecBList) const
+    int RotatedSparseRegression::CalInitVectorBList(const std::vector<double>& dataX, const std::vector<double>& dataY, 
+        int dataCount, double lamda, std::vector<double>& vecBList) const
     {
+        long long xDim = dataX.size() / dataCount;
+        long long yDim = dataY.size() / dataCount;
+        vecBList = std::vector<double>(xDim * yDim , 0);
+        for (int yid = 0; yid < yDim; yid++)
+        {
+            //Calculate LamdaMax
+            double lamdaMax = lamda;
+            for (int xid = 0; xid < xDim; xid++)
+            {
+                double xDimLamda = 0;
+                for (long long dataId = 0; dataId < dataCount; dataId++)
+                {
+                    xDimLamda += dataX.at(dataId * xDim + xid) * dataY.at(dataId * yDim + yid);
+                }
+                xDimLamda = fabs(xDimLamda / dataCount);
+                if (xDimLamda > lamdaMax)
+                {
+                    lamdaMax = xDimLamda;
+                }
+            }
+
+            //Iterate lamda
+            int lamdaIterCount = 100;
+            double lamdaDelta = (lamdaMax - lamda) / lamdaIterCount;
+            long long vecBBaseIndex = yid * xDim;
+            for (int lamdaIterId = 0; lamdaIterId < lamdaIterCount; lamdaIterId++)
+            {
+                int maxInnerIterCount = 10;
+                for (int innerIterId = 0; innerIterId < maxInnerIterCount; innerIterId++)
+                {
+                    UpdateVectorBList(dataX, dataY, yid, dataCount, lamdaMax - lamdaDelta * innerIterId, vecBList);
+                }
+            }
+        }
+
+        return MAGIC_NO_ERROR;
+    }
+
+    void RotatedSparseRegression::UpdateVectorBList(const std::vector<double>& dataX, const std::vector<double>& dataY, int yId, 
+        int dataCount, double lamda, std::vector<double>& vecBList) const
+    {
+        long long xDim = dataX.size() / dataCount;
+        long long yDim = dataY.size() / dataCount;
+        std::vector<double> newVecB;
+        newVecB.reserve(xDim);
+        long long vecBBaseIndex = yId * xDim;
+        for (int xid = 0; xid < xDim; xid++)
+        {
+            double beta = 0;
+            for (int dataId = 0; dataId < dataCount; dataId++)
+            {
+                beta += dataX.at(dataId * xDim + xid) * dataY.at(dataId * yDim + yId);
+                for (int kid = 0; kid < xDim; kid++)
+                {
+                    beta -= dataX.at(dataId * xDim + xid) * dataX.at(dataId * xDim + kid) * vecBList.at(vecBBaseIndex + kid);
+                }
+            }
+            beta = beta / dataCount + vecBList.at(vecBBaseIndex + xid);
+            beta = FunctionS(beta, lamda);
+            newVecB.push_back(beta);
+        }
+        for (int xid = 0; xid < xDim; xid++)
+        {
+            vecBList.at(vecBBaseIndex + xid) = newVecB.at(xid);
+        }
+    }
+
+    double RotatedSparseRegression::FunctionS(double z, double gama) const
+    {
+        double absZ = fabs(z);
+        if (gama >= absZ)
+        {
+            return 0;
+        }
+        else if (z > 0)
+        {
+            return z - gama;
+        }
+        else
+        {
+            return z + gama;
+        }
+    }
+
+    int RotatedSparseRegression::CalVectorBList(const std::vector<double>& dataX, const std::vector<double>& dataY, int dataCount, 
+            double lamda, bool isInitialized, std::vector<double>& vecBList) const
+    {
+        if (!isInitialized)
+        {
+            int initRes = CalInitVectorBList(dataX, dataY, dataCount, lamda, vecBList);
+            if (initRes != MAGIC_NO_ERROR)
+            {
+                DebugLog << "CalInitVectorBList failed" << std::endl;
+                return MAGIC_INVALID_RESULT;
+            }
+        }
+
         int xDim = dataX.size() / dataCount;
         int yDim = dataY.size() / dataCount;
         for (int yid = 0; yid < yDim; yid++)
         {
+            int maxIterCount = 100;
+            double lastEnerge = -1;
+            for (int iterId = 0; iterId < maxIterCount; iterId++)
+            {
+                UpdateVectorBList(dataX, dataY, yid, dataCount, lamda, vecBList);
 
+                //Check whether converged
+                if (IsVectorBListConverged(dataX, dataY, yid, dataCount, lamda, vecBList, lastEnerge))
+                {
+                    break;
+                }
+            }
         }
 
         return MAGIC_NO_ERROR;
+    }
+
+    bool RotatedSparseRegression::IsVectorBListConverged(const std::vector<double>& dataX, const std::vector<double>& dataY, 
+        int yId, int dataCount, double lamda, const std::vector<double>& vecBList, double& lastEnerge) const
+    {
+        if (fabs(lastEnerge) < 1.0e-15)
+        {
+            return true;
+        }
+
+        double curEnerge = 0;
+        long long xDim = dataX.size() / dataCount;
+        long long yDim = dataY.size() / dataCount;
+        long long vecBBaseIndex = yId * xDim;
+        for (int dataId = 0; dataId < dataCount; dataId++)
+        {
+            double xB = 0;
+            long long xBaseIndex = dataId * xDim;
+            for (int xid = 0; xid < xDim; xid++)
+            {
+                xB += vecBList.at(vecBBaseIndex + xid) * dataX.at(xBaseIndex + xid);
+            }
+            xB -= dataY.at(dataId * yDim + yId);
+            curEnerge += xB * xB / dataCount;
+        }
+        double vecBNorm = 0;
+        for (int xid = 0; xid < xDim; xid++)
+        {
+            vecBNorm += fabs(vecBList.at(vecBBaseIndex + xid));
+        }
+        curEnerge += vecBNorm * lamda;
+
+        if (lastEnerge < 0)
+        {
+            lastEnerge = curEnerge;
+            return false;
+        }
+        else
+        {
+            double deltaEnerge = curEnerge - lastEnerge;
+            if (fabs(deltaEnerge) / lastEnerge < 1.0e-5)
+            {
+                lastEnerge = curEnerge;
+                return true;
+            }
+            else
+            {
+                lastEnerge = curEnerge;
+                return false;
+            }
+        }
     }
 
     bool RotatedSparseRegression::IsTrainingErrorConverged(const std::vector<double>& dataX, const std::vector<double>& dataY, 
